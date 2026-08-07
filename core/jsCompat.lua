@@ -8,6 +8,29 @@ local _, JS = ...
 local C_Item = C_Item
 local C_AddOns = C_AddOns
 
+-- Which expansion this client is
+-- Read from the interface number rather than the WOW_PROJECT_* constants, so it
+-- keeps working on any flavor: 11509 -> 1 (Classic Era), 20506 -> 2 (Burning Crusade).
+local expansionLevel = 1
+
+if GetBuildInfo then
+  -- Named locals rather than select(), because GetBuildInfo returns more than
+  -- four values and the extras would land in tonumber's base argument
+  local _, _, _, tocVersion = GetBuildInfo()
+  tocVersion = tonumber(tocVersion)
+  if tocVersion and tocVersion > 0 then
+    expansionLevel = math.floor(tocVersion / 10000)
+  end
+end
+
+function JS.ExpansionLevel()
+  return expansionLevel
+end
+
+function JS.IsBurningCrusade()
+  return expansionLevel >= 2
+end
+
 -- Item info (C_Item since the 1.15.9 UI rebuild)
 local rawGetItemInfoInstant = (C_Item and C_Item.GetItemInfoInstant) or _G.GetItemInfoInstant
 

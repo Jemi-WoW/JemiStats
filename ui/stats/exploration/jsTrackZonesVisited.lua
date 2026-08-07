@@ -47,6 +47,40 @@ local MAIN_ZONES = {
   ["the barrens"] = "The Barrens",
 }
 
+-- Zones that only exist from Burning Crusade onward
+local BURNING_CRUSADE_ZONES = {
+  -- Outland
+  ["hellfire peninsula"] = "Hellfire Peninsula",
+  ["zangarmarsh"] = "Zangarmarsh",
+  ["terokkar forest"] = "Terokkar Forest",
+  ["nagrand"] = "Nagrand",
+  ["blade's edge mountains"] = "Blade's Edge Mountains",
+  ["netherstorm"] = "Netherstorm",
+  ["shadowmoon valley"] = "Shadowmoon Valley",
+
+  -- Eastern Kingdoms
+  ["eversong woods"] = "Eversong Woods",
+  ["ghostlands"] = "Ghostlands",
+  ["isle of quel'danas"] = "Isle of Quel'Danas",
+
+  -- Kalimdor
+  ["azuremyst isle"] = "Azuremyst Isle",
+  ["bloodmyst isle"] = "Bloodmyst Isle",
+}
+
+if JS.IsBurningCrusade() then
+  for key, name in pairs(BURNING_CRUSADE_ZONES) do
+    MAIN_ZONES[key] = name
+  end
+end
+
+-- Denominator for the Zones Visited row, counted from the active list
+local zoneTotal = 0
+for _ in pairs(MAIN_ZONES) do
+  zoneTotal = zoneTotal + 1
+end
+Stats.ZONE_TOTAL = zoneTotal
+
 local function NormalizeMainZone(zoneName)
   zoneName = tostring(zoneName or "")
   zoneName = zoneName:gsub("^%s+", ""):gsub("%s+$", "")

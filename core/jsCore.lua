@@ -6,6 +6,13 @@ JemiStatsDB = JemiStatsDB or {}
 
 JS.ADDON = ADDON
 
+-- Addon artwork
+-- Shipped as a texture rather than a game icon path, because the built-in icons
+-- are not guaranteed to resolve on every client flavor. Keep this in step with
+-- ## IconTexture in the TOC.
+-- The art already fills the square, so it takes no border trim.
+JS.ICON_TEXTURE = "Interface\\AddOns\\JemiStats\\externals\\img\\JemiStatsIcon.tga"
+
 -- Basic helpers
 -- The player GUID never changes during a session, so it is resolved once and
 -- reused. JS.DB() sits in hot paths and this removes an API call from each hit.

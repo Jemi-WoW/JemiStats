@@ -313,11 +313,13 @@ local function FormatDistance(v)
 end
 
 -- Format visited zones
-local ZONE_TOTAL = 40
+-- The exploration tracker sets the total from the zone list for this client's
+-- expansion, so the denominator grows on Burning Crusade.
+Stats.ZONE_TOTAL = 40
 
 local function FormatZonesVisited(v)
   v = tonumber(v or 0) or 0
-  return string.format("%d/%d", v, ZONE_TOTAL)
+  return string.format("%d/%d", v, Stats.ZONE_TOTAL)
 end
 
 -- Format money value
@@ -355,7 +357,6 @@ local function FormatSessionLength(seconds)
   return string.format("%02d:%02d", mins, secs)
 end
 
-Stats.ZONE_TOTAL = ZONE_TOTAL
 Stats.FormatNumber = FormatNumber
 Stats.FormatPercent = FormatPercent
 Stats.FormatDistance = FormatDistance

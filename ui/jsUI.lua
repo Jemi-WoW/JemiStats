@@ -1,8 +1,6 @@
 local _, JS = ...
 local UI = JS.UI
 
-local TITLE_ICON = "Interface\\Icons\\INV_Scroll_15"
-
 -- Fix close button position
 function UI:FixCloseButton(frame, xOff, yOff)
   if not frame then return end
@@ -80,8 +78,7 @@ function JS.CreateMainFrame()
 
     local icon = g:CreateTexture(nil, "OVERLAY")
     icon:SetSize(14, 14)
-    icon:SetTexture(TITLE_ICON)
-    icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+    icon:SetTexture(JS.ICON_TEXTURE)
     icon:SetPoint("LEFT", 0, 0)
 
     local fs = g:CreateFontString(nil, "OVERLAY", "GameFontNormal")

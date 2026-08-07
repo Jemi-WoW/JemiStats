@@ -6,7 +6,6 @@ local UI = JS.UI
 -- the minimap wherever the player puts it and however it is scaled. Position is
 -- stored as the angle LibDBIcon expects, in account-wide saved data.
 
-local MINIMAP_ICON = "Interface\\Icons\\INV_Scroll_15"
 local LDB_NAME = "JemiStats"
 local DEFAULT_ANGLE = 200
 
@@ -67,8 +66,7 @@ local function EnsureDataBroker()
 
   UI.minimapDataObject = broker:NewDataObject(LDB_NAME, {
     type = "launcher",
-    icon = MINIMAP_ICON,
-    iconCoords = { 0.07, 0.93, 0.07, 0.93 },
+    icon = JS.ICON_TEXTURE,
     label = "JemiStats",
     OnClick = function(_, button)
       if button == "LeftButton" or button == "RightButton" then

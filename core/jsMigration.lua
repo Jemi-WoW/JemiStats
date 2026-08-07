@@ -41,24 +41,36 @@ end
 
 function JS.RunStatsMigration()
   local d = JS.DB()
-  if d.statsMigrated then return false end
 
-  d.statsMigrated = true
+  -- Anything already tracked here wins, the import is only for a first run.
+  -- The flag alone is not enough to skip on: an interrupted run could set it
+  -- with nothing imported, and that would lose the old records for good.
+  local hasOwnStats = type(d.stats) == "table" and next(d.stats) ~= nil
 
-  -- Anything already tracked here wins, the import is only for a first run
-  if type(d.stats) == "table" and next(d.stats) ~= nil then
+  if d.statsMigrated and hasOwnStats then
     return false
   end
 
+  if hasOwnStats then
+    d.statsMigrated = true
+    return false
+  end
+
+  -- Nothing of ours yet. Leave the flag alone while the source is missing, so
+  -- installing it later still imports.
   if not JS.IsAddOnLoaded(SOURCE_ADDON) then
     return false
   end
 
   local source = ReadSourceStats()
-  if not source then return false end
+  if not source then
+    d.statsMigrated = true
+    return false
+  end
 
   d.stats = CopyTable(source)
   d.statsMigratedFrom = SOURCE_ADDON
+  d.statsMigrated = true
 
   JS.Msg("Imported your existing stats from " .. SOURCE_ADDON .. ".")
   return true
