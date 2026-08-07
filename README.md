@@ -25,10 +25,6 @@ Runs on **Classic Era (1.15.9)** and **Burning Crusade Classic (2.5.6)** from th
 *   `/jstats sessionreset` - reset session-only stats
 *   `/jstats minimap` - toggle the minimap icon
 
-## **Burning Crusade**
-
-On Burning Crusade Classic the Outland zones, Eversong Woods, Ghostlands, Azuremyst Isle, Bloodmyst Isle and Isle of Quel'Danas all count toward Zones Visited, and the druid flight and Tree of Life forms count toward Times Shapeshifted. Nothing needs configuring - the addon reads the client version and adjusts.
-
 ## **Works with Oathbound**
 
 Install [Oathbound](https://www.curseforge.com/wow/addons/oathbound) alongside JemiStats and the stats appear as a tab inside the Oathbound window instead, with an extra section counting what Oathbound blocked for you. JemiStats' own window and minimap icon stay out of the way.
