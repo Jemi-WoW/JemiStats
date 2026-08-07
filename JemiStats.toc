@@ -1,0 +1,83 @@
+## Interface: 11509
+## Title: <|cff00ff00JemiStats|r> v1.0.0
+## Notes: Live character stats tracking - by Jemi
+## Author: Jamie/Jemi
+## Version: 1.0.0
+## IconTexture: Interface\Icons\INV_Scroll_15
+## SavedVariables: JemiStatsDB
+## OptionalDeps: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0
+## X-Embeds: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0
+
+Libs/LibStub/LibStub.lua
+Libs/CallbackHandler-1.0/CallbackHandler-1.0.lua
+Libs/LibDataBroker-1.1/LibDataBroker-1.1.lua
+Libs/LibDBIcon-1.0/LibDBIcon-1.0.lua
+
+core/jsCompat.lua
+core/jsCore.lua
+core/jsStats.lua
+
+ui/stats/survival/jsTrackHighestCritSession.lua
+ui/stats/survival/jsTrackHighestCritEver.lua
+ui/stats/survival/jsTrackLowestHPSession.lua
+ui/stats/survival/jsTrackLowestHPEver.lua
+ui/stats/survival/jsTrackMissedAttacks.lua
+
+ui/stats/combat/jsTrackEnemiesSlain.lua
+ui/stats/combat/jsTrackRaresSlain.lua
+ui/stats/combat/jsTrackElitesSlain.lua
+ui/stats/combat/jsTrackRareElitesSlain.lua
+ui/stats/combat/jsTrackBossesSlain.lua
+ui/stats/combat/jsTrackCombatDurationAverage.lua
+ui/stats/combat/jsTrackDungeonsEntered.lua
+ui/stats/combat/jsTrackDungeonsCompleted.lua
+
+ui/stats/exploration/jsTrackDistanceTraveledSession.lua
+ui/stats/exploration/jsTrackDistanceTraveledEver.lua
+ui/stats/exploration/jsTrackZonesVisited.lua
+ui/stats/exploration/jsTrackFlightPathsTaken.lua
+ui/stats/exploration/jsTrackJumps.lua
+
+ui/stats/class/jsClassCastStat.lua
+ui/stats/class/jsTrackArrowsShot.lua
+ui/stats/class/jsTrackBulletsShot.lua
+ui/stats/class/jsTrackTimesCharged.lua
+ui/stats/class/jsTrackExecutesLanded.lua
+ui/stats/class/jsTrackTimesBubbled.lua
+ui/stats/class/jsTrackLayOnHands.lua
+ui/stats/class/jsTrackPocketsPicked.lua
+ui/stats/class/jsTrackBackstabs.lua
+ui/stats/class/jsTrackShieldsCast.lua
+ui/stats/class/jsTrackMindControls.lua
+ui/stats/class/jsTrackTotemsDropped.lua
+ui/stats/class/jsTrackLightningBolts.lua
+ui/stats/class/jsTrackPolymorphsCast.lua
+ui/stats/class/jsTrackBlinks.lua
+ui/stats/class/jsTrackDemonsSummoned.lua
+ui/stats/class/jsTrackLifeTapped.lua
+ui/stats/class/jsTrackShapeshifts.lua
+ui/stats/class/jsTrackBattleRezzes.lua
+
+ui/stats/economy/jsTrackGoldEarnedSession.lua
+ui/stats/economy/jsTrackGoldEarnedTotal.lua
+ui/stats/economy/jsTrackGoldSpentTotal.lua
+ui/stats/economy/jsTrackChestsOpened.lua
+
+ui/stats/questing/jsTrackQuestsAccepted.lua
+ui/stats/questing/jsTrackQuestsCompleted.lua
+
+ui/stats/oathbound/jsTrackTradesBlocked.lua
+ui/stats/oathbound/jsTrackInvitesBlocked.lua
+ui/stats/oathbound/jsTrackMailboxBlocks.lua
+ui/stats/oathbound/jsTrackAuctionHouseBlocks.lua
+
+ui/jsUI.lua
+ui/jsPanels_Stats.lua
+ui/jsPanels_Settings.lua
+ui/jsMinimap.lua
+
+core/jsMigration.lua
+core/jsHost.lua
+core/jsAPI.lua
+core/jsSlashCommands.lua
+core/jsEvents.lua
