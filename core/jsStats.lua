@@ -218,6 +218,15 @@ local function EnsureStatsDB()
   s.auctionHouseBlocks   = tonumber(s.auctionHouseBlocks or 0) or 0
 
   s.sessionStartedAt     = s.sessionStartedAt or (GetTime and GetTime() or 0)
+
+  -- Session length is measured from a wall-clock stamp rather than from
+  -- sessionStartedAt, because GetTime() restarts at zero on every login and a
+  -- session kept across logout would otherwise read as negative.
+  s.sessionStartedAtEpoch = tonumber(s.sessionStartedAtEpoch or 0) or 0
+  if s.sessionStartedAtEpoch <= 0 then
+    s.sessionStartedAtEpoch = (time and time()) or 0
+  end
+
   s.currentDungeon       = s.currentDungeon or nil
   s.lastQuestAccepted    = type(s.lastQuestAccepted) == "table" and s.lastQuestAccepted or {}
   s.lastQuestCompleted   = type(s.lastQuestCompleted) == "table" and s.lastQuestCompleted or {}
@@ -385,9 +394,63 @@ function Stats.RefreshPanelIfVisible()
   end
 end
 
--- Record alerts disabled for now
+-- Force a full re-stack of every stats panel
+-- Refresh alone only rewrites values, which is all the once-per-second tick
+-- needs. A display option changes which rows exist at all, so it comes here.
+function Stats.RelayoutPanels()
+  local panels = Stats.panels
+  for i = 1, #panels do
+    local panel = panels[i]
+    if panel.Refresh then
+      panel:Refresh()
+    end
+    if panel.RefreshLayout then
+      panel:RefreshLayout()
+    end
+  end
+end
+
+-- Cached setting flags
+-- The combat log dispatcher and the once-per-second sampler consult these, so
+-- they are read once per change instead of once per event. Defaults match the
+-- setting defaults, because this runs at file load when there is no DB yet.
+Stats.classStatsEnabled = true
+Stats.uiHabitsEnabled = true
+Stats.distanceEnabled = true
+
+function Stats.RefreshSettingCache()
+  if not JS.GetSetting then return end
+  Stats.classStatsEnabled = JS.GetSetting("trackClassStats")
+  Stats.uiHabitsEnabled = JS.GetSetting("trackUIHabits")
+  Stats.distanceEnabled = JS.GetSetting("trackDistance")
+end
+
+-- Record alerts
+-- Announced in chat, optionally with a sound. The sound ID is resolved once and
+-- falls back through SOUNDKIT entries that exist on both Classic Era and
+-- Burning Crusade, so a missing one never errors.
+local RECORD_SOUND = SOUNDKIT and (
+  SOUNDKIT.IG_QUEST_LIST_COMPLETE or
+  SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or
+  SOUNDKIT.IG_CHARACTER_INFO_OPEN
+)
+
 local function QueueRecordAlert(title, valueText)
-  return
+  title = tostring(title or "")
+  if title == "" then return end
+
+  if not JS.GetSetting("announceRecords") then return end
+
+  valueText = tostring(valueText or "")
+  if valueText ~= "" then
+    JS.Msg(title .. ": |cffffd100" .. valueText .. "|r")
+  else
+    JS.Msg(title)
+  end
+
+  if RECORD_SOUND and PlaySound and JS.GetSetting("recordSound") then
+    PlaySound(RECORD_SOUND)
+  end
 end
 
 Stats.QueueRecordAlert = QueueRecordAlert
@@ -488,11 +551,17 @@ local function ForEachTracker(fnName, ...)
   end
 end
 
+-- A tracker in the class category is skipped entirely while class stats are off,
+-- so the option saves the work rather than only hiding the result.
+function Stats.IsTrackerMuted(tracker)
+  return tracker.category == "class" and not Stats.classStatsEnabled
+end
+
 function Stats.DispatchEvent(event, ...)
   for i = 1, #Stats.trackers do
     local tracker = Stats.trackers[i]
     local fn = tracker and tracker.OnEvent
-    if fn then
+    if fn and not Stats.IsTrackerMuted(tracker) then
       fn(tracker, event, ...)
     end
   end
@@ -502,18 +571,25 @@ function Stats.DispatchUpdate(elapsed)
   local trackers = Stats.updateTrackers
   for i = 1, #trackers do
     local tracker = trackers[i]
-    tracker.OnUpdate(tracker, elapsed)
+    if not Stats.IsTrackerMuted(tracker) then
+      tracker.OnUpdate(tracker, elapsed)
+    end
   end
 end
 
 function JS.HandleStatsPlayerLogin()
   EnsureReloadUIHook()
+  Stats.RefreshSettingCache()
 
   local preserveSession = ShouldPreserveSessionAcrossLogin()
   local s = MigrateLegacyStatsState()
 
   if not preserveSession then
-    JS.ResetSessionStats()
+    -- A /reload always keeps the session. A real login only keeps it when the
+    -- player asked for that, and the login count rises either way.
+    if not JS.GetSetting("keepSessionAcrossLogout") then
+      JS.ResetSessionStats()
+    end
     s.timesLoggedIn = (tonumber(s.timesLoggedIn or 0) or 0) + 1
   end
 
@@ -531,6 +607,7 @@ function JS.ResetSessionStats()
   s.distanceSession = 0
   s.goldEarnedSession = 0
   s.sessionStartedAt = GetTime and GetTime() or 0
+  s.sessionStartedAtEpoch = (time and time()) or 0
   s.pendingCombatRecords = {
     highestCritSession = 0,
     lowestHPPctSession = 100,
@@ -542,6 +619,8 @@ end
 
 -- Count UI window opens
 local function CountUIOpen(name)
+  if not Stats.uiHabitsEnabled then return end
+
   local s = EnsureStatsDB()
   if JS.ShouldSpam and JS.ShouldSpam(ShortUISpamKey(name), 0.40) then
     return

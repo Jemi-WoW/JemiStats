@@ -132,10 +132,22 @@ function JS.CreateMinimapButton()
   JS.ApplyMinimapButtonVisibility()
 end
 
--- Flip the icon on or off, returns the new state
-function JS.ToggleMinimapButton()
+-- The stored preference, which is what the Settings checkbox reflects.
+-- Deliberately ignores the host override: a loaded host hides the icon without
+-- touching the choice, so removing the host brings the icon straight back.
+function JS.IsMinimapButtonShown()
   local db = EnsureMinimapDB()
-  db.hide = not db.hide
+  return not db.hide
+end
+
+function JS.SetMinimapButtonShown(show)
+  local db = EnsureMinimapDB()
+  db.hide = not (show and true or false)
   JS.ApplyMinimapButtonVisibility()
   return not db.hide
+end
+
+-- Flip the icon on or off, returns the new state
+function JS.ToggleMinimapButton()
+  return JS.SetMinimapButtonShown(not JS.IsMinimapButtonShown())
 end

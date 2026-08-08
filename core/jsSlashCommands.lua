@@ -8,6 +8,7 @@ SLASH_JEMISTATS2 = "/jstats"
 local function PrintHelp()
   JS.Msg("Commands:")
   JS.Msg("  |cffffd100/jstats|r - open or close the stats window")
+  JS.Msg("  |cffffd100/jstats settings|r - open the settings tab")
   JS.Msg("  |cffffd100/jstats minimap|r - toggle the minimap icon")
   JS.Msg("  |cffffd100/jstats sessionreset|r - reset this session's stats only")
   JS.Msg("  |cffffd100/jstats reset|r - wipe this character's tracked stats")
@@ -23,14 +24,23 @@ SlashCmdList["JEMISTATS"] = function(msg)
     return
   end
 
+  -- Settings tab
+  if msg == "settings" or msg == "config" or msg == "options" then
+    JS.OpenSettingsWindow()
+    return
+  end
+
   -- Minimap icon toggle
+  -- Routed through the setting rather than straight at the icon, so the
+  -- checkbox in the Settings tab stays in step with the command
   if msg == "minimap" then
     if JS.HostLoaded() then
       JS.Msg("The minimap icon is hidden while " .. JS.HostName() .. " is loaded. Use its icon instead.")
       return
     end
 
-    local show = JS.ToggleMinimapButton()
+    local show = not JS.GetSetting("showMinimapButton")
+    JS.SetSetting("showMinimapButton", show, "slash")
     JS.Msg("Minimap icon " .. (show and "shown." or "hidden."))
     return
   end

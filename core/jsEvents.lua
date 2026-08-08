@@ -33,11 +33,15 @@ local function DispatchCombatLog(timestamp, subevent, hideCaster,
                                  srcGUID, srcName, srcFlags, srcRaidFlags,
                                  dstGUID, dstName, dstFlags, dstRaidFlags, ...)
   local trackers = Stats.combatLogTrackers
+  local muteClassStats = not Stats.classStatsEnabled
+
   for i = 1, #trackers do
     local tracker = trackers[i]
-    tracker.OnCombatLog(tracker, timestamp, subevent, hideCaster,
-                        srcGUID, srcName, srcFlags, srcRaidFlags,
-                        dstGUID, dstName, dstFlags, dstRaidFlags, ...)
+    if not (muteClassStats and tracker.category == "class") then
+      tracker.OnCombatLog(tracker, timestamp, subevent, hideCaster,
+                          srcGUID, srcName, srcFlags, srcRaidFlags,
+                          dstGUID, dstName, dstFlags, dstRaidFlags, ...)
+    end
   end
 end
 
@@ -58,8 +62,16 @@ f:SetScript("OnEvent", function(self, event, ...)
     JS.HandleStatsPlayerLogin()
     JS.CreateMinimapButton()
 
-    if not JS.HostLoaded() then
+    if not JS.HostLoaded() and JS.GetSetting("loginMessage") then
       JS.Msg("Loaded. Use /jstats or minimap icon. By Jemi")
+    end
+
+    -- Delayed a beat so a host addon has finished registering its panel opener
+    -- and the window lands wherever it is actually meant to live
+    if JS.GetSetting("openOnLogin") then
+      C_Timer.After(1.0, function()
+        JS.OpenStats()
+      end)
     end
     return
   end

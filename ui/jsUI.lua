@@ -54,6 +54,62 @@ for i = 1, #TAB_DEFS do
   UI.tabIndex[TAB_DEFS[i].key] = i
 end
 
+-- Window placement
+-- Stored account-wide next to the minimap angle, because where a window sits on
+-- screen is a property of the screen rather than of one character.
+local function EnsureWindowDB()
+  JemiStatsDB = JemiStatsDB or {}
+  JemiStatsDB.window = JemiStatsDB.window or {}
+  return JemiStatsDB.window
+end
+
+function JS.SaveWindowPosition()
+  if not UI.frame then return end
+  if not JS.GetSetting("rememberWindowPosition") then return end
+
+  local point, _, relPoint, x, y = UI.frame:GetPoint()
+  if not point then return end
+
+  local db = EnsureWindowDB()
+  db.point = point
+  db.relPoint = relPoint or point
+  db.x = tonumber(x) or 0
+  db.y = tonumber(y) or 0
+end
+
+function JS.RestoreWindowPosition()
+  if not UI.frame then return end
+
+  local db = EnsureWindowDB()
+
+  UI.frame:ClearAllPoints()
+
+  if JS.GetSetting("rememberWindowPosition") and db.point then
+    -- Anchored to UIParent explicitly: GetPoint() reports a nil relative frame
+    -- for a parent anchor, and SetPoint would not take nil back
+    UI.frame:SetPoint(db.point, UIParent, db.relPoint or db.point, db.x or 0, db.y or 0)
+  else
+    UI.frame:SetPoint("CENTER")
+  end
+end
+
+-- Let Escape close the window, or stop it from doing so
+-- UISpecialFrames is a plain list, so the name is removed before being re-added
+-- and never ends up in there twice.
+function JS.ApplyEscapeClose()
+  local name = "JemiStatsFrame"
+
+  for i = #UISpecialFrames, 1, -1 do
+    if UISpecialFrames[i] == name then
+      table.remove(UISpecialFrames, i)
+    end
+  end
+
+  if JS.GetSetting("closeWithEscape") then
+    tinsert(UISpecialFrames, name)
+  end
+end
+
 -- Main addon frame
 function JS.CreateMainFrame()
   local frame = CreateFrame("Frame", "JemiStatsFrame", UIParent, "UIPanelDialogTemplate")
@@ -61,9 +117,19 @@ function JS.CreateMainFrame()
   frame:SetPoint("CENTER")
   frame:SetMovable(true)
   frame:EnableMouse(true)
+  frame:SetClampedToScreen(true)
   frame:RegisterForDrag("LeftButton")
-  frame:SetScript("OnDragStart", frame.StartMoving)
-  frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+
+  -- Checked on drag start rather than by flipping SetMovable, so the lock can be
+  -- toggled while the window is open and takes effect on the very next drag
+  frame:SetScript("OnDragStart", function(self)
+    if JS.GetSetting("lockWindow") then return end
+    self:StartMoving()
+  end)
+  frame:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    JS.SaveWindowPosition()
+  end)
   frame:Hide()
 
   frame:SetFrameStrata("DIALOG")
@@ -104,7 +170,7 @@ function JS.CreateMainFrame()
     UI:FixCloseButton(self, 2, 0.5)
   end)
 
-  tinsert(UISpecialFrames, "JemiStatsFrame")
+  JS.ApplyEscapeClose()
 
   local tabCount = #TAB_DEFS
 
@@ -140,6 +206,7 @@ function JS.CreateMainFrame()
   end
 
   UI.frame = frame
+  JS.RestoreWindowPosition()
 end
 
 -- Show one tab panel
@@ -199,4 +266,15 @@ function JS.OpenStatsWindow()
   UI.frame:Show()
   UI.frame:Raise()
   UI:ShowTabByKey("stats")
+end
+
+-- Open the window straight on the settings tab
+-- Always JemiStats' own window, even with a host addon loaded: the host renders
+-- the stats panel but not these options, so this is the only way to reach them.
+function JS.OpenSettingsWindow()
+  JS.BuildUI()
+  if not UI.frame then return end
+  UI.frame:Show()
+  UI.frame:Raise()
+  UI:ShowTabByKey("settings")
 end

@@ -21,6 +21,7 @@ Runs on **Classic Era (1.15.9)** and **Burning Crusade Classic (2.5.6)** from th
 ## **Commands**
 
 *   `/jemistats` or `/jstats` - open or close the window
+*   `/jstats settings` - open the settings tab
 *   `/jstats reset` - wipe this character's tracked stats
 *   `/jstats sessionreset` - reset session-only stats
 *   `/jstats minimap` - toggle the minimap icon

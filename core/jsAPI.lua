@@ -5,6 +5,10 @@ local Stats = JS.Stats
 -- Public contract for host addons
 -- Version 1. A host checks API_VERSION before calling anything and falls back
 -- to running without stats if it does not recognise the number.
+--
+-- Entries are only ever added, never changed or removed, because hosts compare
+-- API_VERSION for exact equality. A host feature-detects a newer call with a
+-- plain `if api.Thing then` and keeps working against an older JemiStats.
 
 JS.API = {
   API_VERSION = 1,
@@ -47,5 +51,20 @@ JS.API = {
   -- How to open the host's own stats view, see core/jsHost.lua
   SetPanelOpener = function(fn)
     return JS.SetPanelOpener(fn)
+  end,
+
+  -- Builds the JemiStats settings panel inside `parent` and returns it, so a
+  -- host can show our options in its own window. Calling twice with the same
+  -- parent returns the existing panel. The returned frame carries a Refresh().
+  CreateSettingsPanel = function(parent)
+    return JS.CreateSettingsPanel(parent)
+  end,
+
+  -- The reverse direction: hand us the host's own settings panel builder and a
+  -- switcher appears in our Settings tab to flip between the two.
+  -- provider.label  button text, e.g. "Oathbound"
+  -- provider.Create function(parent) -> frame filling parent, ideally with Refresh()
+  SetSettingsProvider = function(provider)
+    return JS.SetSettingsProvider(provider)
   end,
 }

@@ -35,6 +35,16 @@ local function UpdateDistanceTravelled()
   s.lastPosInstanceID = pid
 end
 
+-- Forget where the player was standing.
+-- Called when distance tracking is switched off or back on, so the ground
+-- covered while it was disabled is never credited in one lump on the next sample.
+function JS.ResetDistanceBaseline()
+  local s = Stats.EnsureStatsDB()
+  s.lastPosX = nil
+  s.lastPosY = nil
+  s.lastPosInstanceID = nil
+end
+
 JS.RegisterStatTracker({
   key = "distanceSession",
   category = "exploration",
@@ -43,6 +53,7 @@ JS.RegisterStatTracker({
   tooltip = "Approximate distance traveled this session, sampled from your position once per second.",
   colors = { 0.70, 0.84, 0.94, 0.78, 0.90, 1.00 },
   OnUpdate = function(_, elapsed)
+    if not Stats.distanceEnabled then return end
     UpdateDistanceTravelled()
   end,
 })
