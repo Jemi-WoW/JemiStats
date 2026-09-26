@@ -8,7 +8,6 @@ local DIM   = Stats.colors.DIM
 local DEFAULT_BRAND = "JemiStats"
 local DEFAULT_HELPER = "Issues with Stats not tracking correctly? Try '/jstats sessionreset'\nIf issues persist, Try '/jstats reset'"
 
--- Show stat tooltip
 local function ShowStatTooltip(widget, title, body)
   if not widget or not body or body == "" then return end
   GameTooltip:SetOwner(widget, "ANCHOR_TOP")
@@ -21,10 +20,7 @@ local function ShowStatTooltip(widget, title, body)
   GameTooltip:Show()
 end
 
--- STATS PANEL
--- Built into whatever frame it is handed, so the same panel works inside this
--- addon's window and inside a host addon's tab. opts carries the wording that
--- differs per host: opts.brand for the header line, opts.helperText for the hint.
+-- Built into whatever frame it is handed, so a host can hold it too.
 function JS.CreateStatsPanel(parent, opts)
   if not parent then return nil end
   if parent._jsStatsPanel then return parent._jsStatsPanel end
@@ -52,12 +48,7 @@ function JS.CreateStatsPanel(parent, opts)
   header:SetPoint("TOPLEFT", 8, -6)
   header:SetText("Stats")
 
-  -- Helper text
-  -- One fontstring per line, and no SetWidth on any of them. A fontstring with
-  -- no width auto-sizes to its text instead of wrapping, so a command like
-  -- '/oath statsreset' can never be split across two lines. The host's wording
-  -- arrives through opts.helperText and is measured the same way, so the panel
-  -- looks identical standalone and inside Oathbound.
+  -- One fontstring per line and no SetWidth, so a command never wraps mid-way
   local helperLines = {}
 
   do
@@ -86,12 +77,10 @@ function JS.CreateStatsPanel(parent, opts)
     end
   end
 
-  local inset = CreateFrame("Frame", nil, panel, "InsetFrameTemplate3")
+  local inset = JS.CreateInset(panel)
   inset:SetPoint("BOTTOMRIGHT", -8, 10)
 
-  -- Push the body below whichever is taller, the "Stats" title or the helper.
-  -- Driven by the measured text rather than a fixed offset, so a longer helper
-  -- string moves the body down instead of being clipped by it.
+  -- Measured rather than fixed, so a longer helper moves the body down
   local appliedInsetTop
 
   local function LayoutHeaderArea()
@@ -103,8 +92,7 @@ function JS.CreateStatsPanel(parent, opts)
 
     local top = math.max(INSET_TOP_MIN, HELPER_TOP + helperHeight + HELPER_BOTTOM_PAD)
 
-    -- Only re-anchor on a real change, so this never ping-pongs with the
-    -- OnSizeChanged handler that calls back into the layout
+    -- Only on a real change, or this ping-pongs with OnSizeChanged
     if appliedInsetTop == top then return end
     appliedInsetTop = top
 
@@ -113,7 +101,7 @@ function JS.CreateStatsPanel(parent, opts)
 
   LayoutHeaderArea()
 
-  local topInset = CreateFrame("Frame", nil, inset, "InsetFrameTemplate3")
+  local topInset = JS.CreateInset(inset)
   topInset:SetPoint("TOPLEFT", PAD, -PAD)
   topInset:SetPoint("TOPRIGHT", -PAD, -PAD)
   topInset:SetHeight(46)
@@ -124,11 +112,11 @@ function JS.CreateStatsPanel(parent, opts)
   topText:SetJustifyH("LEFT")
   topText:SetTextColor(DIM[1], DIM[2], DIM[3])
 
-  local listInset = CreateFrame("Frame", nil, inset, "InsetFrameTemplate3")
+  local listInset = JS.CreateInset(inset)
   listInset:SetPoint("TOPLEFT", topInset, "BOTTOMLEFT", 0, -10)
   listInset:SetPoint("BOTTOMRIGHT", -PAD, PAD)
 
-  local scroll = CreateFrame("ScrollFrame", nil, listInset, "UIPanelScrollFrameTemplate")
+  local scroll = JS.CreateScrollFrame(listInset)
   scroll:SetPoint("TOPLEFT", 12, -12)
   scroll:SetPoint("BOTTOMRIGHT", -28, 12)
   scroll:EnableMouseWheel(true)
@@ -139,7 +127,6 @@ function JS.CreateStatsPanel(parent, opts)
 
   local ENTRY_LAYOUT = Stats.BuildTrackerEntryLayout()
 
-  -- Build stat rows
   local widgets = {}
   for i = 1, #ENTRY_LAYOUT do
     local def = ENTRY_LAYOUT[i]
@@ -177,14 +164,9 @@ function JS.CreateStatsPanel(parent, opts)
     end
   end
 
-  -- Layout all stat rows
-  -- Only widgets flagged visible are stacked, so hiding zeroed rows closes the
-  -- gap instead of leaving a hole. The section gap is added ahead of each header
-  -- rather than behind the last row, which keeps it correct no matter how many
-  -- rows in between are hidden.
+  -- Gaps go ahead of each header, so hidden rows never leave a hole
   local function RefreshLayout()
-    -- Re-measured here as well as at build, because string heights only settle
-    -- once the panel has actually been shown
+    -- Re-measured, because string heights only settle once shown
     LayoutHeaderArea()
 
     local scrollW = scroll:GetWidth() or 0
@@ -257,8 +239,7 @@ function JS.CreateStatsPanel(parent, opts)
   panel.Refresh = function()
     local s = Stats.EnsureStatsDB()
 
-    -- Measured from the wall-clock stamp, so a session kept across a logout
-    -- still reads correctly once GetTime() has restarted at zero
+    -- Wall clock, so a session kept across a logout still reads correctly
     if JS.GetSetting("showSessionLength") then
       local started = tonumber(s.sessionStartedAtEpoch or 0) or 0
       local now = (time and time()) or 0
@@ -320,8 +301,7 @@ function JS.CreateStatsPanel(parent, opts)
       end
     end
 
-    -- The once-per-second tick calls this too, so the re-stack only runs when
-    -- the set of rows actually changed
+    -- The tick calls this too, so only re-stack when the row set changed
     if visibilityChanged then
       QueueRefreshLayout()
     end

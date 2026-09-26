@@ -1,7 +1,6 @@
 local _, JS = ...
 
--- Totems are summoned, so SPELL_SUMMON from the player catches every totem
--- without needing a per-totem spell list.
+-- SPELL_SUMMON from the player catches every totem, so no spell list.
 JS.RegisterClassCastStat({
   key = "totemsDropped",
   class = "SHAMAN",

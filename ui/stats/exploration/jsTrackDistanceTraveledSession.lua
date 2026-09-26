@@ -35,9 +35,7 @@ local function UpdateDistanceTravelled()
   s.lastPosInstanceID = pid
 end
 
--- Forget where the player was standing.
--- Called when distance tracking is switched off or back on, so the ground
--- covered while it was disabled is never credited in one lump on the next sample.
+-- Forget the last position, so ground covered while disabled is not credited.
 function JS.ResetDistanceBaseline()
   local s = Stats.EnsureStatsDB()
   s.lastPosX = nil

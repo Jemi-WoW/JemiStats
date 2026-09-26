@@ -1,8 +1,6 @@
 local _, JS = ...
 
--- Host addon detection
--- JemiStats works alone. When a host addon renders the stats panel in its own
--- window, JemiStats steps out of the way: no window of its own, no minimap icon.
+-- With a host addon loaded, JemiStats drops its own window and minimap icon.
 
 local HOST_ADDON = "Oathbound"
 
@@ -19,8 +17,7 @@ function JS.HostName()
   return HOST_ADDON
 end
 
--- Resolve once, at PLAYER_LOGIN, when every addon has finished loading
--- Checking any earlier is meaningless, since load order decides who exists yet.
+-- Resolved at PLAYER_LOGIN; earlier, load order decides who exists yet.
 function JS.ResolveHost()
   if resolved then return hostLoaded end
   resolved = true
@@ -32,8 +29,7 @@ function JS.ResolveHost()
   return hostLoaded
 end
 
--- A host that shows the stats panel inside its own window registers how to open
--- it here, so JemiStats never has to reach back into the host addon.
+-- A host registers how to open its own window, so we never reach into it.
 function JS.SetPanelOpener(fn)
   if type(fn) ~= "function" then return false end
   panelOpener = fn

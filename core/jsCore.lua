@@ -6,16 +6,10 @@ JemiStatsDB = JemiStatsDB or {}
 
 JS.ADDON = ADDON
 
--- Addon artwork
--- Shipped as a texture rather than a game icon path, because the built-in icons
--- are not guaranteed to resolve on every client flavor. Keep this in step with
--- ## IconTexture in the TOC.
--- The art already fills the square, so it takes no border trim.
+-- Shipped as a texture; built-in icons do not resolve on every client.
 JS.ICON_TEXTURE = "Interface\\AddOns\\JemiStats\\externals\\img\\JemiStatsIcon.tga"
 
--- Basic helpers
--- The player GUID never changes during a session, so it is resolved once and
--- reused. JS.DB() sits in hot paths and this removes an API call from each hit.
+-- Resolved once: JS.DB() sits in hot paths and calls this on every hit.
 local playerGUID
 
 function JS.PlayerGUID()
@@ -27,13 +21,11 @@ end
 
 function JS.PlayerLevel() return UnitLevel("player") or 1 end
 
--- Character DB key
 function JS.CharKey()
   return JS.PlayerGUID() or "UNKNOWN"
 end
 
--- Per-character DB
--- Cached: this is called from the combat log handler and every stat write
+-- Cached; called from the combat log handler and every stat write.
 local cachedDB, cachedKey
 
 function JS.DB()
@@ -58,12 +50,10 @@ function JS.InvalidateDBCache()
   cachedDB, cachedKey = nil, nil
 end
 
--- Chat message
 function JS.Msg(text)
   DEFAULT_CHAT_FRAME:AddMessage("|cffd4af37[JemiStats]|r " .. text)
 end
 
--- Debug output
 function JS.Debug(text)
   local d = JS.DB()
   d.settings = d.settings or {}
@@ -73,7 +63,6 @@ end
 
 JS.UI = JS.UI or {}
 
--- Spam protection for repeated counters
 function JS.ShouldSpam(key, cooldown)
   cooldown = cooldown or 1.5
   local d = JS.DB()
@@ -95,20 +84,7 @@ function JS.ShouldSpam(key, cooldown)
   return false
 end
 
--- Settings
--- Every option is a boolean, stored per character under JS.DB().settings.
--- A def may carry `get`/`set` when the real state lives somewhere else, which is
--- how the minimap icon stays account-wide while still showing up as a checkbox.
---
--- def fields:
---   key      (string)   saved key, also the lookup name
---   section  (string)   which collapsible section it renders under
---   label    (string)   checkbox text
---   tooltip  (string)   hover body
---   default  (boolean)  value before the player ever touches it
---   get/set  (function) optional, overrides where the value is read and written
---   disabled (function) optional, returns true while the option cannot be used
---   disabledTooltip (string) optional, explains why it is greyed out
+-- Boolean options, per character; a def's get/set overrides where it is stored.
 
 JS.SETTINGS_DEFS = {
   -- Interface
@@ -311,8 +287,7 @@ JS.SETTINGS_SECTION_ORDER = {
   },
 }
 
--- Saved values from an older build can be anything, so they are read through
--- this rather than trusted as booleans.
+-- An older build could have saved anything here, so nothing is trusted.
 local function CoerceSettingBoolean(value, default)
   if value == nil then
     return default and true or false
@@ -340,12 +315,10 @@ end
 
 JS.CoerceSettingBoolean = CoerceSettingBoolean
 
--- Get setting definition
 function JS.GetSettingDef(key)
   return JS.SETTINGS_DEFS and JS.SETTINGS_DEFS[key] or nil
 end
 
--- Is this option usable right now
 function JS.IsSettingDisabled(key)
   local def = JS.GetSettingDef(key)
   if not def or not def.disabled then return false end
@@ -353,7 +326,6 @@ function JS.IsSettingDisabled(key)
   return ok and disabled and true or false
 end
 
--- Get setting value
 function JS.GetSetting(key)
   local def = JS.GetSettingDef(key)
 
@@ -380,7 +352,6 @@ function JS.GetSetting(key)
   return false
 end
 
--- Set setting value
 function JS.SetSetting(key, value, source)
   value = value and true or false
 
@@ -403,9 +374,7 @@ function JS.SetSetting(key, value, source)
   end
 end
 
--- Apply setting side effects
--- Anything that has to happen the moment an option flips, so nothing here needs
--- a reload to take hold.
+-- Everything that has to happen the moment an option flips, so none need a reload.
 function JS.ApplySettingSideEffects(key)
   -- Hot paths read cached copies rather than calling GetSetting per event
   if JS.Stats and JS.Stats.RefreshSettingCache then
@@ -428,16 +397,14 @@ function JS.ApplySettingSideEffects(key)
 
   if key == "rememberWindowPosition" then
     if JS.SaveWindowPosition then
-      -- Capture where the window is right now, so switching this on keeps the
-      -- spot the player already chose instead of the last saved one
+      -- Capture the current spot, so switching on keeps it over the last saved one
       JS.SaveWindowPosition()
     end
     return
   end
 
   if key == "trackDistance" then
-    -- Drop the stale position sample, otherwise re-enabling would credit the
-    -- whole distance covered while the tracker was off
+    -- Drop the stale sample, or re-enabling credits the distance covered while off
     if JS.ResetDistanceBaseline then
       JS.ResetDistanceBaseline()
     end

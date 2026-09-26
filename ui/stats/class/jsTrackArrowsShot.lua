@@ -15,10 +15,23 @@ local function IsHunter()
   return token == "HUNTER"
 end
 
+-- Ammo slot, resolved once; nil on the modern codebase, where asking throws.
+local ammoSlot
+local ammoSlotResolved = false
+
+local function GetAmmoSlot()
+  if not ammoSlotResolved then
+    ammoSlotResolved = true
+    ammoSlot = JS.GetInventorySlot("AmmoSlot")
+  end
+  return ammoSlot
+end
+
 -- Number of arrows/bullets currently sitting in the equipped ammo slot.
 local function GetAmmoCount()
-  if not GetInventorySlotInfo or not GetInventoryItemCount then return 0 end
-  local slot = GetInventorySlotInfo("AmmoSlot")
+  if not GetInventoryItemCount then return 0 end
+
+  local slot = GetAmmoSlot()
   if not slot then return 0 end
 
   local count = tonumber(GetInventoryItemCount("player", slot) or 0) or 0
@@ -55,13 +68,10 @@ local function ResetAmmoBaseline()
   s._lastAmmoCount = GetAmmoCount()
 end
 
--- Sampled once per second. When the equipped ammo slot drops, credit the
--- difference to arrowsShot or bulletsShot based on the equipped ranged weapon.
--- Restocking (an increase) just re-baselines without counting. This single
--- sampler feeds BOTH the Arrows Shot and Bullets Shot stats, mirroring how the
--- distance tracker's session file also maintains the "ever" total.
+-- Feeds both Arrows Shot and Bullets Shot; restocking only re-baselines.
 local function SampleAmmoFired()
   if not IsHunter() then return end
+  if not GetAmmoSlot() then return end
 
   local s = Stats.EnsureStatsDB()
   local current = GetAmmoCount()

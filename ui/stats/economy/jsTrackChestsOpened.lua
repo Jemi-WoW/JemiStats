@@ -52,18 +52,28 @@ local function TextLooksLikeChest(name)
   return false
 end
 
+-- The loot window's title, wherever this client keeps it
 local function GetLootTitleText()
-  if LootFrame then
-    if LootFrame.TitleContainer and LootFrame.TitleContainer.TitleText and LootFrame.TitleContainer.TitleText.GetText then
-      return LootFrame.TitleContainer.TitleText:GetText()
-    end
-    if LootFrame.TitleText and LootFrame.TitleText.GetText then
-      return LootFrame.TitleText:GetText()
+  local candidates = {}
+
+  local function Consider(fs)
+    if fs and fs.GetText then
+      candidates[#candidates + 1] = fs
     end
   end
 
-  if LootFrameTitleText and LootFrameTitleText.GetText then
-    return LootFrameTitleText:GetText()
+  if LootFrame then
+    Consider(LootFrame.TitleContainer and LootFrame.TitleContainer.TitleText)
+    Consider(LootFrame.TitleText)
+    Consider(LootFrame.Title)
+  end
+  Consider(LootFrameTitleText)
+
+  for i = 1, #candidates do
+    local text = candidates[i]:GetText()
+    if text and text ~= "" then
+      return text
+    end
   end
 
   return nil
@@ -125,11 +135,13 @@ local function AnyKnownNameLooksLikeChest()
 end
 
 local function AnyKnownNameIsExcluded()
-  local candidates = {
-    GetLootTitleText(),
-    GetTooltipTitleText(),
-    UnitExists and UnitExists("target") and UnitName and UnitName("target") or nil,
-  }
+  -- Appended, not a literal: a nil hole would truncate the length operator
+  local candidates = {}
+  candidates[#candidates + 1] = GetLootTitleText()
+  candidates[#candidates + 1] = GetTooltipTitleText()
+  if UnitExists and UnitExists("target") and UnitName then
+    candidates[#candidates + 1] = UnitName("target")
+  end
 
   for i = 1, #candidates do
     local name = NormalizeName(candidates[i])

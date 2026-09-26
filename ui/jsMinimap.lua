@@ -1,10 +1,7 @@
 local _, JS = ...
 local UI = JS.UI
 
--- Minimap button
--- Driven by LibDBIcon, which parents the icon to the Minimap frame so it follows
--- the minimap wherever the player puts it and however it is scaled. Position is
--- stored as the angle LibDBIcon expects, in account-wide saved data.
+-- Driven by LibDBIcon; position is the angle it expects, saved account-wide.
 
 local LDB_NAME = "JemiStats"
 local DEFAULT_ANGLE = 200
@@ -21,7 +18,6 @@ local function NormalizeAngle(angle)
   return angle
 end
 
--- Saved minimap settings
 local function EnsureMinimapDB()
   JemiStatsDB = JemiStatsDB or {}
   JemiStatsDB.minimap = JemiStatsDB.minimap or {}
@@ -103,9 +99,7 @@ local function EnsureRegisteredButton()
   return icons, db
 end
 
--- Apply the current show/hide state, no reload needed
--- A loaded host owns the interface, so its icon is the only one on the minimap.
--- The stored preference is left alone, so removing the host brings it back.
+-- A loaded host owns the minimap, but the stored preference is left alone.
 function JS.ApplyMinimapButtonVisibility()
   local icons, db = EnsureRegisteredButton()
   if not icons or not db then
@@ -132,9 +126,7 @@ function JS.CreateMinimapButton()
   JS.ApplyMinimapButtonVisibility()
 end
 
--- The stored preference, which is what the Settings checkbox reflects.
--- Deliberately ignores the host override: a loaded host hides the icon without
--- touching the choice, so removing the host brings the icon straight back.
+-- The stored preference the Settings checkbox reflects, ignoring the host override.
 function JS.IsMinimapButtonShown()
   local db = EnsureMinimapDB()
   return not db.hide

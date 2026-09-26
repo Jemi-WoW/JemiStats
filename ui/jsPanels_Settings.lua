@@ -17,18 +17,13 @@ local SCROLL_STEP = 36
 local SWITCH_BTN_W = 94
 local SWITCH_BTN_H = 22
 
--- Every JemiStats settings body built this session.
--- With a host addon loaded the same body exists twice, once in each window, and
--- both have to move together when a value changes.
+-- With a host loaded the same body exists twice, and both must move together.
 local settingsPanels = {}
 
--- A host addon that can render its own settings inside our window registers it
--- here, so this file never has to know which addon that is.
+-- A host registers its own settings panel here, so we never name the addon.
 local settingsProvider
 
--- Saved collapse state
--- Sections start collapsed, so the tab opens as a short list of headings rather
--- than one long wall of checkboxes.
+-- Sections start collapsed, so the tab opens as a short list of headings.
 local function EnsurePanelState()
   local d = JS.DB()
   d.uiState = d.uiState or {}
@@ -114,9 +109,7 @@ local function ApplySettingRowState(check, hovered)
   end
 end
 
--- Create one clickable setting row
--- The whole row is the button and the checkbox itself takes no mouse input, so
--- clicking anywhere along the line toggles the option.
+-- The whole row is the button, so clicking anywhere along it toggles the option.
 local function CreateCheckbox(parent, def)
   local row = CreateFrame("Button", nil, parent)
   row:SetHeight(ROW_H)
@@ -130,10 +123,8 @@ local function CreateCheckbox(parent, def)
   hover:SetAlpha(0.9)
   hover:Hide()
 
-  -- UICheckButtonTemplate ships its own label. It is dropped for the custom gold
-  -- one, and the guard matters: on Burning Crusade that fontstring is reached as
-  -- $parentText, which does not resolve for a frame created without a name.
-  local check = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
+  -- The template's own label is dropped for the custom gold one below
+  local check = JS.CreateCheckButton(row)
   if check.Text then
     check.Text:SetText("")
     check.Text:Hide()
@@ -180,7 +171,6 @@ local function CreateCheckbox(parent, def)
   return check
 end
 
--- Create one collapsible section
 local function CreateSection(parent, sectionKey, title, desc)
   local section = CreateFrame("Frame", nil, parent)
   section.sectionKey = sectionKey
@@ -188,7 +178,6 @@ local function CreateSection(parent, sectionKey, title, desc)
   section.checks = {}
   section.visibleChecks = {}
 
-  -- Header
   local headerBtn = CreateFrame("Button", nil, section)
   headerBtn:SetHeight(HEADER_H)
   headerBtn:RegisterForClicks("LeftButtonUp")
@@ -197,16 +186,26 @@ local function CreateSection(parent, sectionKey, title, desc)
   headerBtn:EnableMouse(true)
   section.header = headerBtn
 
-  local shell = CreateFrame("Frame", nil, headerBtn, BackdropTemplateMixin and "BackdropTemplate")
+  local shell, canBackdrop = JS.CreateBackdropFrame(headerBtn)
   shell:SetAllPoints()
-  shell:SetBackdrop({
-    bgFile = "Interface/DialogFrame/UI-DialogBox-Background",
-    edgeFile = "Interface/DialogFrame/UI-DialogBox-Border",
-    tile = true,
-    tileSize = 32,
-    edgeSize = 16,
-    insets = { left = 4, right = 4, top = 4, bottom = 4 },
-  })
+
+  if canBackdrop then
+    shell:SetBackdrop({
+      bgFile = "Interface/DialogFrame/UI-DialogBox-Background",
+      edgeFile = "Interface/DialogFrame/UI-DialogBox-Border",
+      tile = true,
+      tileSize = 32,
+      edgeSize = 16,
+      insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
+  else
+    -- Wired to the same setters, so the hover handlers below stay unaware
+    local flat = shell:CreateTexture(nil, "BACKGROUND")
+    flat:SetAllPoints()
+    shell.SetBackdropColor = function(_, r, g, b, a) flat:SetColorTexture(r, g, b, a or 1) end
+    shell.SetBackdropBorderColor = function() end
+  end
+
   shell:SetBackdropColor(0.42, 0.31, 0.17, 0.92)
   shell:SetBackdropBorderColor(0.35, 0.35, 0.45, 0.8)
   headerBtn.shell = shell
@@ -227,7 +226,7 @@ local function CreateSection(parent, sectionKey, title, desc)
   headerBtn.innerShade = innerShade
 
   -- Collapse toggle
-  local toggleBtn = CreateFrame("Button", nil, headerBtn, "UIPanelButtonTemplate")
+  local toggleBtn = JS.CreatePanelButton(headerBtn)
   toggleBtn:SetSize(22, 18)
   toggleBtn:SetPoint("LEFT", 9, 0)
   StyleAddonButton(toggleBtn)
@@ -256,8 +255,7 @@ local function CreateSection(parent, sectionKey, title, desc)
   countFS:SetTextColor(1.00, 0.84, 0.20)
   section.countText = countFS
 
-  -- Body
-  local body = CreateFrame("Frame", nil, section, "InsetFrameTemplate3")
+  local body = JS.CreateInset(section)
   body:SetPoint("TOPLEFT", headerBtn, "BOTTOMLEFT", 0, -1)
   body:SetPoint("TOPRIGHT", headerBtn, "BOTTOMRIGHT", 0, -1)
   section.body = body
@@ -353,8 +351,7 @@ local function LayoutSection(section, width, query)
 
   section:Show()
 
-  -- A filter forces every matching section open, otherwise nothing would be
-  -- visible to read the results in
+  -- A filter forces matching sections open, or the results stay unreadable
   local collapsed = (not hasQuery) and IsCollapsed(section.sectionKey)
   section.toggleBtn:SetText(collapsed and ">" or "v")
 
@@ -408,13 +405,7 @@ local function LayoutSection(section, width, query)
   section:SetHeight(HEADER_H + 1 + bodyHeight)
 end
 
--- SETTINGS PANEL
--- Driven entirely by JS.SETTINGS_DEFS, JS.SETTINGS_ORDER and
--- JS.SETTINGS_SECTION_ORDER, so a new option is three table entries in
--- core/jsCore.lua and nothing in here changes.
---
--- Built as a child filling `parent` rather than into `parent` itself, so a host
--- addon can drop it into one of its own frames and show or hide it as a block.
+-- Driven by the settings tables, so a new option changes nothing in here.
 function JS.CreateSettingsPanel(parent)
   if not parent then return nil end
   if parent._jsSettingsPanel then return parent._jsSettingsPanel end
@@ -427,12 +418,12 @@ function JS.CreateSettingsPanel(parent)
   header:SetPoint("TOPLEFT", 8, -6)
   header:SetText("Settings")
 
-  local inset = CreateFrame("Frame", nil, panel, "InsetFrameTemplate3")
+  local inset = JS.CreateInset(panel)
   inset:SetPoint("TOPLEFT", 8, -30)
   inset:SetPoint("BOTTOMRIGHT", -8, 10)
 
   -- Filter bar
-  local searchInset = CreateFrame("Frame", nil, inset, "InsetFrameTemplate3")
+  local searchInset = JS.CreateInset(inset)
   searchInset:SetPoint("TOPLEFT", 12, -12)
   searchInset:SetPoint("TOPRIGHT", -12, -12)
   searchInset:SetHeight(48)
@@ -442,10 +433,9 @@ function JS.CreateSettingsPanel(parent)
   filterLabel:SetTextColor(GOLD[1], GOLD[2], GOLD[3])
   filterLabel:SetText("Filter")
 
-  local search = CreateFrame("EditBox", nil, searchInset, "InputBoxTemplate")
+  local search = JS.CreateEditBox(searchInset)
   search:SetSize(220, 20)
   search:SetPoint("LEFT", filterLabel, "RIGHT", 10, 0)
-  search:SetAutoFocus(false)
   search:SetText("")
   search:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
   panel.search = search
@@ -455,13 +445,13 @@ function JS.CreateSettingsPanel(parent)
   hint:SetText("type to filter")
 
   -- Scrolling section list
-  local listInset = CreateFrame("Frame", nil, inset, "InsetFrameTemplate3")
+  local listInset = JS.CreateInset(inset)
   listInset:SetPoint("TOPLEFT", searchInset, "BOTTOMLEFT", 0, -10)
   listInset:SetPoint("TOPRIGHT", searchInset, "BOTTOMRIGHT", 0, -10)
   listInset:SetPoint("BOTTOMLEFT", 12, 12)
   listInset:SetPoint("BOTTOMRIGHT", -12, 12)
 
-  local scroll = CreateFrame("ScrollFrame", nil, listInset, "UIPanelScrollFrameTemplate")
+  local scroll = JS.CreateScrollFrame(listInset)
   scroll:SetPoint("TOPLEFT", 12, -12)
   scroll:SetPoint("BOTTOMRIGHT", -28, 12)
   scroll:EnableMouseWheel(true)
@@ -619,9 +609,7 @@ function JS.CreateSettingsPanel(parent)
   return panel
 end
 
--- Called after a setting changes from anywhere
--- Every copy is refreshed, not just the visible one, so switching back to a
--- window that was open the whole time never shows a stale checkbox.
+-- Every copy, not just the visible one, or a hidden window goes stale.
 function JS.RefreshSettingsPanel()
   for i = 1, #settingsPanels do
     local panel = settingsPanels[i]
@@ -631,9 +619,7 @@ function JS.RefreshSettingsPanel()
   end
 end
 
--- A host addon offering its own settings for our window
--- provider.label  button text
--- provider.Create function(parent) -> frame filling parent, ideally with .Refresh
+-- A host's own settings for our window; provider carries label and Create.
 function JS.SetSettingsProvider(provider)
   if type(provider) ~= "table" then return false end
   if type(provider.Create) ~= "function" then return false end
@@ -647,10 +633,7 @@ function JS.HasSettingsProvider()
   return settingsProvider ~= nil
 end
 
--- Source switcher
--- Two buttons top right that swap which addon's settings fill the panel. Only
--- built when a host registered a provider, so on Burning Crusade or a solo
--- install the tab looks exactly as it always did.
+-- Two buttons swapping which addon's settings fill the panel, host only.
 local function BuildSourceSwitcher(parent, sources, activeKey)
   local bar = CreateFrame("Frame", nil, parent)
   bar:SetSize(1, SWITCH_BTN_H)
@@ -660,8 +643,7 @@ local function BuildSourceSwitcher(parent, sources, activeKey)
   bar.activeKey = activeKey
   bar.buttons = {}
 
-  -- The other addon's panel is only built the first time it is asked for, so a
-  -- player who never switches never pays for it
+  -- Built on first ask, so a player who never switches never pays for it
   local function ResolvePanel(source)
     if not source.panel and source.Create then
       source.panel = source.Create(parent)
@@ -714,7 +696,7 @@ local function BuildSourceSwitcher(parent, sources, activeKey)
   for i = #sources, 1, -1 do
     local source = sources[i]
 
-    local btn = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
+    local btn = JS.CreatePanelButton(bar)
     btn:SetSize(SWITCH_BTN_W, SWITCH_BTN_H)
     btn:SetText(source.label)
     btn.sourceKey = source.key
@@ -750,8 +732,7 @@ function JS.BuildSettingsPanel(tabPanel)
 
   local own = JS.CreateSettingsPanel(tabPanel)
 
-  -- Solo install, or a host that does not offer its settings: nothing to switch
-  -- between, so the panel stays exactly as it is without a switcher
+  -- Nothing to switch between, so the panel stays as it is
   if not settingsProvider then
     tabPanel.Refresh = function()
       if own and own.Refresh then own.Refresh() end

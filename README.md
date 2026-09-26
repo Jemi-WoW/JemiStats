@@ -6,7 +6,16 @@
 
 Every kill, every crit, every close call, every zone. Live, per character, saved between sessions.
 
-Runs on **Classic Era (1.15.9)** and **Burning Crusade Classic (2.5.6)** from the same download.
+Runs on **Classic Era**, **Burning Crusade Classic** and **WoW Forever** from the same download.
+
+## **Supported clients**
+
+| Client | Interface | TOC |
+|---|---|---|
+| Classic Era 1.15.9 | 11509 | `JemiStats_Vanilla.toc` |
+| Burning Crusade Classic 2.5.6 | 20506 | `JemiStats_TBC.toc` |
+| WoW Forever 1.60.1 | 16001 | `JemiStats_Camelot.toc` |
+| fallback | 11509, 20506, 16001 | `JemiStats.toc` |
 
 ## **What it tracks**
 
@@ -25,6 +34,16 @@ Runs on **Classic Era (1.15.9)** and **Burning Crusade Classic (2.5.6)** from th
 *   `/jstats reset` - wipe this character's tracked stats
 *   `/jstats sessionreset` - reset session-only stats
 *   `/jstats minimap` - toggle the minimap icon
+
+## **Forever notes**
+
+Forever serves vanilla content on the modern codebase, so it reports itself as Retail and a few things behave differently there.
+
+- **Stats may not persist between launches.** The beta client writes SavedVariables on logout but does not read them back, so the addon can start from defaults every session. This is a client bug, not an addon bug.
+- Zones Visited counts the 40 vanilla zones, same as Classic Era.
+- Arrows Shot and Bullets Shot stay at zero. The modern codebase has no ammo slot to sample.
+- Times Checked Talents stays at zero while the spellbook and talents share one frame, because there is no way to tell the two apart. Opening it counts as a spellbook open.
+- `ReloadUI()` is protected on the beta. Type `/reload` instead. Either way the session stats survive the reload.
 
 ## **Works with Oathbound**
 

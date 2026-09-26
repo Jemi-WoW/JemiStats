@@ -1,4 +1,4 @@
-## Interface: 11509, 20506, 16001
+## Interface: 11509
 ## Title: <|cff00ff00JemiStats|r> v1.2.0
 ## Notes: Live character stats tracking - by Jemi
 ## Author: Jamie/Jemi

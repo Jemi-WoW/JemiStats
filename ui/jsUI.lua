@@ -1,13 +1,11 @@
 local _, JS = ...
 local UI = JS.UI
 
--- Fix close button position
 function UI:FixCloseButton(frame, xOff, yOff)
   if not frame then return end
   xOff = xOff or -5
   yOff = yOff or -5
 
-  -- Try common close button refs
   local btn = frame.CloseButton or frame.closeButton
 
   if not btn then
@@ -17,7 +15,6 @@ function UI:FixCloseButton(frame, xOff, yOff)
     end
   end
 
-  -- Fallback: search child buttons
   if not btn and frame.GetChildren then
     local kids = { frame:GetChildren() }
     for i = 1, #kids do
@@ -32,7 +29,19 @@ function UI:FixCloseButton(frame, xOff, yOff)
     end
   end
 
-  if not btn then return end
+  -- A bare frame carries no close button, so it gets one
+  if not btn then
+    local template
+    btn, template = JS.CreateFromTemplates("Button", nil, frame, { "UIPanelCloseButton" })
+    btn:SetSize(32, 32)
+
+    if not template then
+      btn:SetNormalTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Up")
+      btn:SetPushedTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Down")
+      btn:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight", "ADD")
+      btn:SetScript("OnClick", function() frame:Hide() end)
+    end
+  end
 
   btn:ClearAllPoints()
   btn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", xOff, yOff)
@@ -54,9 +63,7 @@ for i = 1, #TAB_DEFS do
   UI.tabIndex[TAB_DEFS[i].key] = i
 end
 
--- Window placement
--- Stored account-wide next to the minimap angle, because where a window sits on
--- screen is a property of the screen rather than of one character.
+-- Stored account-wide: where a window sits belongs to the screen, not a character.
 local function EnsureWindowDB()
   JemiStatsDB = JemiStatsDB or {}
   JemiStatsDB.window = JemiStatsDB.window or {}
@@ -85,17 +92,14 @@ function JS.RestoreWindowPosition()
   UI.frame:ClearAllPoints()
 
   if JS.GetSetting("rememberWindowPosition") and db.point then
-    -- Anchored to UIParent explicitly: GetPoint() reports a nil relative frame
-    -- for a parent anchor, and SetPoint would not take nil back
+    -- UIParent named explicitly: GetPoint() reports nil for a parent anchor
     UI.frame:SetPoint(db.point, UIParent, db.relPoint or db.point, db.x or 0, db.y or 0)
   else
     UI.frame:SetPoint("CENTER")
   end
 end
 
--- Let Escape close the window, or stop it from doing so
--- UISpecialFrames is a plain list, so the name is removed before being re-added
--- and never ends up in there twice.
+-- Removed before re-adding, so the name never lands in the list twice.
 function JS.ApplyEscapeClose()
   local name = "JemiStatsFrame"
 
@@ -110,9 +114,35 @@ function JS.ApplyEscapeClose()
   end
 end
 
--- Main addon frame
+-- Window and tab templates, best first; the modern codebase renamed them.
+local FRAME_TEMPLATES = { "UIPanelDialogTemplate", "BasicFrameTemplateWithInset", "BasicFrameTemplate" }
+local TAB_TEMPLATES = { "CharacterFrameTabButtonTemplate", "PanelTabButtonTemplate", "TabButtonTemplate" }
+
 function JS.CreateMainFrame()
-  local frame = CreateFrame("Frame", "JemiStatsFrame", UIParent, "UIPanelDialogTemplate")
+  local frame, frameTemplate = JS.CreateFromTemplates("Frame", "JemiStatsFrame", UIParent, FRAME_TEMPLATES)
+
+  -- Nothing to sit in front of on a bare frame, so it brings its own panel art
+  if not frameTemplate then
+    local bg, canBackdrop = JS.CreateBackdropFrame(frame)
+    bg:SetAllPoints()
+    bg:SetFrameLevel(math.max(0, frame:GetFrameLevel() - 1))
+
+    if canBackdrop then
+      bg:SetBackdrop({
+        bgFile = "Interface/DialogFrame/UI-DialogBox-Background",
+        edgeFile = "Interface/DialogFrame/UI-DialogBox-Border",
+        tile = true,
+        tileSize = 32,
+        edgeSize = 32,
+        insets = { left = 11, right = 12, top = 12, bottom = 11 },
+      })
+    else
+      local flat = bg:CreateTexture(nil, "BACKGROUND")
+      flat:SetAllPoints()
+      flat:SetColorTexture(0.05, 0.05, 0.06, 0.94)
+    end
+  end
+
   frame:SetSize(560, 460)
   frame:SetPoint("CENTER")
   frame:SetMovable(true)
@@ -120,8 +150,7 @@ function JS.CreateMainFrame()
   frame:SetClampedToScreen(true)
   frame:RegisterForDrag("LeftButton")
 
-  -- Checked on drag start rather than by flipping SetMovable, so the lock can be
-  -- toggled while the window is open and takes effect on the very next drag
+  -- Checked on drag start, so the lock takes effect while the window is open
   frame:SetScript("OnDragStart", function(self)
     if JS.GetSetting("lockWindow") then return end
     self:StartMoving()
@@ -136,9 +165,14 @@ function JS.CreateMainFrame()
   frame:SetFrameLevel(200)
   local titleText = "JemiStats - Made by Jemi"
 
+  -- Not every template ships a title fontstring, so one is made to anchor against
+  if not frame.Title then
+    frame.Title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    frame.Title:SetPoint("TOP", frame, "TOP", 0, -5)
+  end
+
   frame.Title:SetText("")
 
-  -- Custom title group
   if not frame.TitleGroup then
     local g = CreateFrame("Frame", nil, frame)
 
@@ -174,28 +208,41 @@ function JS.CreateMainFrame()
 
   local tabCount = #TAB_DEFS
 
+  local tabTemplate = JS.PickTemplate("Button", TAB_TEMPLATES)
+
+  -- PanelTemplates_* needs regions only the real templates have
+  UI.usePanelTabs = tabTemplate ~= nil and PanelTemplates_SetTab ~= nil
+
   frame.tabs = {}
   for i = 1, tabCount do
-    local tab = CreateFrame("Button", "JemiStatsFrameTab" .. i, frame, "CharacterFrameTabButtonTemplate")
+    local tab = CreateFrame("Button", "JemiStatsFrameTab" .. i, frame, tabTemplate)
     tab:SetID(i)
+
+    if not tabTemplate then
+      tab:SetSize(100, 26)
+      local fs = tab:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+      fs:SetPoint("CENTER")
+      tab:SetFontString(fs)
+      tab:SetHighlightFontObject("GameFontHighlightSmall")
+    end
+
     tab:SetText(TAB_DEFS[i].label)
     tab:SetScript("OnClick", function(self)
-      PanelTemplates_SetTab(frame, self:GetID())
       UI:ShowTab(self:GetID())
     end)
     frame.tabs[i] = tab
   end
 
-  -- Tab positions
   frame.tabs[1]:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 5, 7)
   for i = 2, tabCount do
-    frame.tabs[i]:SetPoint("LEFT", frame.tabs[i - 1], "RIGHT", -15, 0)
+    frame.tabs[i]:SetPoint("LEFT", frame.tabs[i - 1], "RIGHT", UI.usePanelTabs and -15 or 2, 0)
   end
 
-  PanelTemplates_SetNumTabs(frame, tabCount)
-  PanelTemplates_SetTab(frame, 1)
+  if UI.usePanelTabs then
+    PanelTemplates_SetNumTabs(frame, tabCount)
+    PanelTemplates_SetTab(frame, 1)
+  end
 
-  -- Content panels
   frame.panels = {}
   for i = 1, tabCount do
     local p = CreateFrame("Frame", nil, frame)
@@ -209,14 +256,14 @@ function JS.CreateMainFrame()
   JS.RestoreWindowPosition()
 end
 
--- Show one tab panel
 function UI:ShowTab(id)
   if not UI.frame then return end
-  if PanelTemplates_SetTab then
+
+  UI.selectedTab = id
+  if UI.usePanelTabs then
     PanelTemplates_SetTab(UI.frame, id)
   end
 
-  -- Hide all panels first
   for i = 1, #UI.frame.panels do UI.frame.panels[i]:Hide() end
   local p = UI.frame.panels[id]
   if not p then return end
@@ -231,7 +278,6 @@ function UI:ShowTabByKey(key)
   UI:ShowTab(id)
 end
 
--- Build full UI once
 function JS.BuildUI()
   if UI.frame then return end
   JS.CreateMainFrame()
@@ -240,7 +286,6 @@ function JS.BuildUI()
   UI:ShowTab(1)
 end
 
--- Toggle main frame
 function JS.ToggleUI()
   if not UI.frame then
     JS.BuildUI()
@@ -253,7 +298,7 @@ function JS.ToggleUI()
   else
     UI.frame:Show()
     if UI.ShowTab then
-      local active = PanelTemplates_GetSelectedTab(UI.frame) or 1
+      local active = UI.usePanelTabs and PanelTemplates_GetSelectedTab(UI.frame) or UI.selectedTab or 1
       UI:ShowTab(active)
     end
   end
@@ -268,9 +313,7 @@ function JS.OpenStatsWindow()
   UI:ShowTabByKey("stats")
 end
 
--- Open the window straight on the settings tab
--- Always JemiStats' own window, even with a host addon loaded: the host renders
--- the stats panel but not these options, so this is the only way to reach them.
+-- Always our own window: a host renders the stats panel but not these options.
 function JS.OpenSettingsWindow()
   JS.BuildUI()
   if not UI.frame then return end

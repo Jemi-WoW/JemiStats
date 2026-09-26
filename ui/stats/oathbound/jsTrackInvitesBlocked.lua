@@ -1,8 +1,7 @@
 local _, JS = ...
 local Stats = JS.Stats
 
--- Oathbound does the blocking and pushes the count in through the API, so this
--- row is only registered when Oathbound is actually loaded
+-- Registered only with Oathbound loaded; it pushes the count through the API.
 JS.DeferStatTracker("Oathbound", {
   key = "invitesBlocked",
   category = "oathbound",

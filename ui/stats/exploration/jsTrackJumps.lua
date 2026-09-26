@@ -3,27 +3,37 @@ local Stats = JS.Stats
 
 local debounce = 0.75
 
--- Hooked through the compat helper so a client without AscendStop just skips it
+-- requireFalling separates the two hooks: only AscendStop fires mid-air.
+local function CountJump(requireFalling)
+  if requireFalling and not (IsFalling and IsFalling()) then return end
+  if UnitOnTaxi and UnitOnTaxi("player") then return end
+  if IsFlying and IsFlying() then return end
+  if IsSwimming and IsSwimming() then return end
+
+  local s = Stats.EnsureStatsDB()
+  local now = GetTime and GetTime() or 0
+  local last = tonumber(s.lastJumpCountAt or 0) or 0
+  if (now - last) <= debounce then
+    return
+  end
+
+  s.lastJumpCountAt = now
+  if JS.RecordJump then
+    JS.RecordJump()
+  end
+end
+
+-- AscendStop preferred: it cannot mistake swimming or flying upward for a jump.
 if not JS._jumpStatsHookInstalled then
-  JS._jumpStatsHookInstalled = true
-
-  JS.HookGlobal("AscendStop", function()
-    if not IsFalling or not IsFalling() then return end
-    if UnitOnTaxi and UnitOnTaxi("player") then return end
-    if IsFlying and IsFlying() then return end
-
-    local s = Stats.EnsureStatsDB()
-    local now = GetTime and GetTime() or 0
-    local last = tonumber(s.lastJumpCountAt or 0) or 0
-    if (now - last) <= debounce then
-      return
-    end
-
-    s.lastJumpCountAt = now
-    if JS.RecordJump then
-      JS.RecordJump()
-    end
+  JS._jumpStatsHookInstalled = JS.HookGlobal("AscendStop", function()
+    CountJump(true)
   end)
+
+  if not JS._jumpStatsHookInstalled then
+    JS._jumpStatsHookInstalled = JS.HookGlobal("JumpOrAscendStart", function()
+      CountJump(false)
+    end)
+  end
 end
 
 function JS.RecordJump()

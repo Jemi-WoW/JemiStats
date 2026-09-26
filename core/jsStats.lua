@@ -12,14 +12,30 @@ local GREEN  = { 0.62, 0.82, 0.38 }
 local REDVAL = { 0.92, 0.36, 0.36 }
 local OFFGOLD= { 1.00, 0.90, 0.62 }
 
-local UI_FRAME_NAMES = { "WorldMapFrame", "CharacterFrame", "SpellBookFrame", "QuestLogFrame", "TalentFrame", "PlayerTalentFrame" }
+-- Frame to habit counter; names differ per codebase, only the present ones hook.
 local UI_OPEN_COUNTERS = {
   WorldMapFrame = "mapOpened",
   CharacterFrame = "characterOpened",
   SpellBookFrame = "spellbookOpened",
+  PlayerSpellsFrame = "spellbookOpened",
   QuestLogFrame = "questLogOpened",
   TalentFrame = "talentsChecked",
   PlayerTalentFrame = "talentsChecked",
+  ClassTalentFrame = "talentsChecked",
+}
+
+local UI_FRAME_NAMES = {}
+for frameName in pairs(UI_OPEN_COUNTERS) do
+  UI_FRAME_NAMES[#UI_FRAME_NAMES + 1] = frameName
+end
+
+-- A merged spellbook/talent frame is absent here, or it would count as both.
+local UI_TOGGLE_HOOKS = {
+  { toggle = "ToggleWorldMap",    counter = "mapOpened",       frames = { "WorldMapFrame" } },
+  { toggle = "ToggleCharacter",   counter = "characterOpened", frames = { "CharacterFrame" } },
+  { toggle = "ToggleSpellBook",   counter = "spellbookOpened", frames = { "SpellBookFrame", "PlayerSpellsFrame" } },
+  { toggle = "ToggleQuestLog",    counter = "questLogOpened",  frames = { "QuestLogFrame" } },
+  { toggle = "ToggleTalentFrame", counter = "talentsChecked",  frames = { "PlayerTalentFrame", "TalentFrame", "ClassTalentFrame" } },
 }
 
 JS.Stats = JS.Stats or {}
@@ -28,8 +44,7 @@ local Stats = JS.Stats
 Stats.trackers = Stats.trackers or {}
 Stats.trackersByKey = Stats.trackersByKey or {}
 
--- Trackers split by the callback they implement, so the hot combat-log path
--- and the once-per-second sampler only touch the handful that care
+-- Split by callback, so the hot paths only touch the trackers that care
 Stats.combatLogTrackers = Stats.combatLogTrackers or {}
 Stats.updateTrackers = Stats.updateTrackers or {}
 Stats.categoryOrder = { "survival", "combat", "exploration", "class", "economy", "questing", "oathbound" }
@@ -113,9 +128,7 @@ function JS.RegisterStatTracker(def)
   return def
 end
 
--- Trackers that only make sense with a host addon loaded
--- Load order runs every file before PLAYER_LOGIN, so these wait in a list until
--- the host check has actually resolved.
+-- Held until PLAYER_LOGIN, when the host check can finally resolve.
 Stats.deferredTrackers = Stats.deferredTrackers or {}
 
 function JS.DeferStatTracker(hostAddon, def)
@@ -137,10 +150,7 @@ function JS.FlushDeferredStatTrackers()
   Stats.deferredTrackers = {}
 end
 
--- Ensure stats DB exists
--- Every tracker calls this, several of them once per second, so the full
--- normalize pass runs only when the table is new to this session. The marker is
--- an upvalue rather than a saved field, so a fresh login still repairs old data.
+-- Normalizes only when the table is new, because trackers call this constantly.
 local normalizedStats
 
 local function EnsureStatsDB()
@@ -219,9 +229,7 @@ local function EnsureStatsDB()
 
   s.sessionStartedAt     = s.sessionStartedAt or (GetTime and GetTime() or 0)
 
-  -- Session length is measured from a wall-clock stamp rather than from
-  -- sessionStartedAt, because GetTime() restarts at zero on every login and a
-  -- session kept across logout would otherwise read as negative.
+  -- Wall clock, because GetTime() restarts at zero on every login
   s.sessionStartedAtEpoch = tonumber(s.sessionStartedAtEpoch or 0) or 0
   if s.sessionStartedAtEpoch <= 0 then
     s.sessionStartedAtEpoch = (time and time()) or 0
@@ -295,7 +303,6 @@ function JS.ResetCharacterStats()
   return s
 end
 
--- Format large number
 local function FormatNumber(n)
   n = tonumber(n or 0) or 0
   local s = tostring(math.floor(n + 0.5))
@@ -308,22 +315,18 @@ local function FormatNumber(n)
   return out
 end
 
--- Format percent value
 local function FormatPercent(v)
   v = tonumber(v or 100) or 100
   if v < 0 then v = 0 end
   return string.format("%.1f%%", v)
 end
 
--- Format yard distance
 local function FormatDistance(v)
   v = tonumber(v or 0) or 0
   return FormatNumber(v) .. " yd"
 end
 
--- Format visited zones
--- The exploration tracker sets the total from the zone list for this client's
--- expansion, so the denominator grows on Burning Crusade.
+-- The exploration tracker overwrites the total for this client's expansion.
 Stats.ZONE_TOTAL = 40
 
 local function FormatZonesVisited(v)
@@ -331,7 +334,6 @@ local function FormatZonesVisited(v)
   return string.format("%d/%d", v, Stats.ZONE_TOTAL)
 end
 
--- Format money value
 local function FormatCopper(v)
   v = tonumber(v or 0) or 0
   if v < 0 then v = 0 end
@@ -341,7 +343,6 @@ local function FormatCopper(v)
   return string.format("%dg %02ds %02dc", g, s, c)
 end
 
--- Format short duration
 local function FormatDuration(seconds)
   seconds = tonumber(seconds or 0) or 0
   if seconds < 0 then seconds = 0 end
@@ -350,7 +351,6 @@ local function FormatDuration(seconds)
   return string.format("%02d:%02d", mins, secs)
 end
 
--- Format session length
 local function FormatSessionLength(seconds)
   seconds = tonumber(seconds or 0) or 0
   if seconds < 0 then seconds = 0 end
@@ -374,9 +374,7 @@ Stats.FormatCopper = FormatCopper
 Stats.FormatDuration = FormatDuration
 Stats.FormatSessionLength = FormatSessionLength
 
--- Refresh panel if open
--- The panel registers itself here, because it can live inside this addon's
--- window or inside a host addon's tab and only it knows which.
+-- Panels register themselves, since only they know which window they live in.
 Stats.panels = Stats.panels or {}
 
 function Stats.RegisterPanel(panel)
@@ -394,9 +392,7 @@ function Stats.RefreshPanelIfVisible()
   end
 end
 
--- Force a full re-stack of every stats panel
--- Refresh alone only rewrites values, which is all the once-per-second tick
--- needs. A display option changes which rows exist at all, so it comes here.
+-- Full re-stack, for when a display option changes which rows exist at all.
 function Stats.RelayoutPanels()
   local panels = Stats.panels
   for i = 1, #panels do
@@ -410,10 +406,7 @@ function Stats.RelayoutPanels()
   end
 end
 
--- Cached setting flags
--- The combat log dispatcher and the once-per-second sampler consult these, so
--- they are read once per change instead of once per event. Defaults match the
--- setting defaults, because this runs at file load when there is no DB yet.
+-- Read once per change instead of once per event; defaults match the settings.
 Stats.classStatsEnabled = true
 Stats.uiHabitsEnabled = true
 Stats.distanceEnabled = true
@@ -425,10 +418,7 @@ function Stats.RefreshSettingCache()
   Stats.distanceEnabled = JS.GetSetting("trackDistance")
 end
 
--- Record alerts
--- Announced in chat, optionally with a sound. The sound ID is resolved once and
--- falls back through SOUNDKIT entries that exist on both Classic Era and
--- Burning Crusade, so a missing one never errors.
+-- Falls through SOUNDKIT entries, so a missing one never errors.
 local RECORD_SOUND = SOUNDKIT and (
   SOUNDKIT.IG_QUEST_LIST_COMPLETE or
   SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or
@@ -455,14 +445,12 @@ end
 
 Stats.QueueRecordAlert = QueueRecordAlert
 
--- Simple combat check
 local function InCombatNow()
   return InCombatLockdown and InCombatLockdown() or false
 end
 
 Stats.InCombatNow = InCombatNow
 
--- Ensure delayed combat stats
 local function EnsurePendingCombatStats()
   local s = EnsureStatsDB()
   s.pendingCombatRecords = type(s.pendingCombatRecords) == "table" and s.pendingCombatRecords or {}
@@ -476,7 +464,6 @@ end
 
 Stats.EnsurePendingCombatStats = EnsurePendingCombatStats
 
--- Increment one stat
 local function IncStat(key, amount)
   local s = EnsureStatsDB()
   amount = tonumber(amount or 1) or 1
@@ -486,7 +473,6 @@ end
 
 Stats.IncStat = IncStat
 
--- Spam key for UI opens
 local function ShortUISpamKey(name)
   return "STAT_UI_" .. tostring(name or "unknown")
 end
@@ -519,17 +505,19 @@ local function ShouldPreserveSessionAcrossLogin()
   return false
 end
 
+-- Post-hooked, not replaced: ReloadUI is protected on Forever.
 local _reloadUIHookInstalled = false
 local function EnsureReloadUIHook()
   if _reloadUIHookInstalled then return end
-  if type(ReloadUI) ~= "function" then return end
 
-  _reloadUIHookInstalled = true
-
-  local originalReloadUI = ReloadUI
-  ReloadUI = function(...)
+  _reloadUIHookInstalled = JS.HookGlobal("ReloadUI", function()
     MarkSessionForReloadPreserve()
-    return originalReloadUI(...)
+  end)
+
+  -- The modern codebase also reloads straight through C_UI, bypassing the global
+  if C_UI and type(C_UI.Reload) == "function" then
+    hooksecurefunc(C_UI, "Reload", MarkSessionForReloadPreserve)
+    _reloadUIHookInstalled = true
   end
 end
 
@@ -551,8 +539,7 @@ local function ForEachTracker(fnName, ...)
   end
 end
 
--- A tracker in the class category is skipped entirely while class stats are off,
--- so the option saves the work rather than only hiding the result.
+-- Skipped entirely, so the option saves the work rather than hiding the result.
 function Stats.IsTrackerMuted(tracker)
   return tracker.category == "class" and not Stats.classStatsEnabled
 end
@@ -585,8 +572,7 @@ function JS.HandleStatsPlayerLogin()
   local s = MigrateLegacyStatsState()
 
   if not preserveSession then
-    -- A /reload always keeps the session. A real login only keeps it when the
-    -- player asked for that, and the login count rises either way.
+    -- A real login only keeps the session when the player asked for that
     if not JS.GetSetting("keepSessionAcrossLogout") then
       JS.ResetSessionStats()
     end
@@ -599,7 +585,6 @@ function JS.HandleStatsPlayerLogin()
   Stats.RefreshPanelIfVisible()
 end
 
--- Reset session-only stats
 function JS.ResetSessionStats()
   local s = EnsureStatsDB()
   s.highestCritSession = 0
@@ -617,82 +602,62 @@ function JS.ResetSessionStats()
   ForEachTracker("OnSessionReset")
 end
 
--- Count UI window opens
-local function CountUIOpen(name)
+-- Keyed on the counter, so a window reached two ways still counts once.
+local function CountUIOpenCounter(counterKey)
+  if not counterKey then return end
   if not Stats.uiHabitsEnabled then return end
 
+  if JS.ShouldSpam and JS.ShouldSpam(ShortUISpamKey(counterKey), 0.40) then
+    return
+  end
+
   local s = EnsureStatsDB()
-  if JS.ShouldSpam and JS.ShouldSpam(ShortUISpamKey(name), 0.40) then
-    return
-  end
-
-  local key = UI_OPEN_COUNTERS[name]
-  if not key then
-    return
-  end
-
-  s[key] = (tonumber(s[key] or 0) or 0) + 1
+  s[counterKey] = (tonumber(s[counterKey] or 0) or 0) + 1
   Stats.RefreshPanelIfVisible()
+end
+
+local function CountUIOpen(name)
+  CountUIOpenCounter(UI_OPEN_COUNTERS[name])
+end
+
+local function AnyFrameShown(frameNames)
+  for i = 1, #frameNames do
+    local frame = _G[frameNames[i]]
+    if frame and frame.IsShown and frame:IsShown() then
+      return true
+    end
+  end
+  return false
 end
 
 local _uiHooksInstalled = false
 local _uiFrameHooks = {}
 
--- Install UI open hooks
 EnsureUIOpenHooks = function()
   if _uiHooksInstalled then return end
   _uiHooksInstalled = true
 
-  if hooksecurefunc then
-    hooksecurefunc("ShowUIPanel", function(frame)
-      if not frame or not frame.GetName or not frame:IsShown() then return end
-      CountUIOpen(frame:GetName())
+  if not hooksecurefunc then return end
+
+  JS.HookGlobal("ShowUIPanel", function(frame)
+    if not frame or not frame.GetName or not frame:IsShown() then return end
+    CountUIOpen(frame:GetName())
+  end)
+
+  for i = 1, #UI_TOGGLE_HOOKS do
+    local entry = UI_TOGGLE_HOOKS[i]
+    JS.HookGlobal(entry.toggle, function()
+      if AnyFrameShown(entry.frames) then
+        CountUIOpenCounter(entry.counter)
+      end
     end)
-
-    if ToggleWorldMap then
-      hooksecurefunc("ToggleWorldMap", function()
-        if WorldMapFrame and WorldMapFrame:IsShown() then
-          CountUIOpen("WorldMapFrame")
-        end
-      end)
-    end
-
-    if ToggleCharacter then
-      hooksecurefunc("ToggleCharacter", function()
-        if CharacterFrame and CharacterFrame:IsShown() then
-          CountUIOpen("CharacterFrame")
-        end
-      end)
-    end
-
-    if ToggleSpellBook then
-      hooksecurefunc("ToggleSpellBook", function()
-        if SpellBookFrame and SpellBookFrame:IsShown() then
-          CountUIOpen("SpellBookFrame")
-        end
-      end)
-    end
-
-    if ToggleQuestLog then
-      hooksecurefunc("ToggleQuestLog", function()
-        if QuestLogFrame and QuestLogFrame:IsShown() then
-          CountUIOpen("QuestLogFrame")
-        end
-      end)
-    end
-
-    if ToggleTalentFrame then
-      hooksecurefunc("ToggleTalentFrame", function()
-        local tf = _G.PlayerTalentFrame or _G.TalentFrame
-        if tf and tf:IsShown() then
-          CountUIOpen(tf:GetName() or "TalentFrame")
-        end
-      end)
-    end
   end
 end
 
--- Hook delayed UI frames
+-- The retry gives up, rather than waiting forever on a frame never coming.
+local MAX_UI_HOOK_RETRIES = 10
+local _uiHookRetries = 0
+
 EnsureUIFrameHooks = function()
   local missing = false
 
@@ -712,7 +677,12 @@ EnsureUIFrameHooks = function()
     end
   end
 
-  if missing and C_Timer and C_Timer.After then
+  if not missing then return end
+
+  _uiHookRetries = _uiHookRetries + 1
+  if _uiHookRetries > MAX_UI_HOOK_RETRIES then return end
+
+  if C_Timer and C_Timer.After then
     C_Timer.After(1.0, EnsureUIFrameHooks)
   end
 end
@@ -740,8 +710,7 @@ function Stats.BuildTrackerEntryLayout()
 
     for j = 1, #Stats.trackers do
       local tracker = Stats.trackers[j]
-      -- A tracker with a `class` field only appears for that class; the section
-      -- header is auto-skipped when no trackers match (insertedHeader stays false).
+      -- A `class` field limits the row to that class; an empty section loses its header
       if tracker.category == category and (not tracker.class or tracker.class == playerClass) then
         table.insert(categoryTrackers, tracker)
       end
@@ -827,8 +796,7 @@ function Stats.TooltipBodyForKey(key)
   return nil
 end
 
--- Once-per-second sampler for position, taxi state and ammo counts
--- A ticker replaces the old per-frame OnUpdate, so nothing runs between beats.
+-- Once-per-second sampler; a ticker, so nothing runs between beats.
 C_Timer.NewTicker(1.0, function()
   Stats.DispatchUpdate(1.0)
   Stats.RefreshPanelIfVisible()

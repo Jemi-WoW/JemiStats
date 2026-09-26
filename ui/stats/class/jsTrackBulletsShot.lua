@@ -1,9 +1,7 @@
 local _, JS = ...
 local Stats = JS.Stats
 
--- Display-only tracker. Its value is maintained by the shared ammo sampler in
--- obTrackArrowsShot.lua, mirroring how obTrackDistanceTraveledEver displays a
--- total maintained by obTrackDistanceTraveledSession.
+-- Display only; the value is kept by the ammo sampler in jsTrackArrowsShot.lua.
 JS.RegisterStatTracker({
   key = "bulletsShot",
   category = "class",

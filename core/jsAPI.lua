@@ -2,21 +2,12 @@ local _, JS = ...
 
 local Stats = JS.Stats
 
--- Public contract for host addons
--- Version 1. A host checks API_VERSION before calling anything and falls back
--- to running without stats if it does not recognise the number.
---
--- Entries are only ever added, never changed or removed, because hosts compare
--- API_VERSION for exact equality. A host feature-detects a newer call with a
--- plain `if api.Thing then` and keeps working against an older JemiStats.
+-- Public contract for host addons; entries are only ever added, never changed.
 
 JS.API = {
   API_VERSION = 1,
 
-  -- Builds the stats panel inside `parent` and returns it. Calling twice with
-  -- the same parent returns the existing panel.
-  -- opts.brand      wording for the "tracked by X" header line
-  -- opts.helperText the hint shown top right
+  -- Builds the stats panel in `parent`; opts carries brand and helperText
   CreateStatsPanel = function(parent, opts)
     return JS.CreateStatsPanel(parent, opts)
   end,
@@ -53,17 +44,12 @@ JS.API = {
     return JS.SetPanelOpener(fn)
   end,
 
-  -- Builds the JemiStats settings panel inside `parent` and returns it, so a
-  -- host can show our options in its own window. Calling twice with the same
-  -- parent returns the existing panel. The returned frame carries a Refresh().
+  -- Builds our settings panel in `parent`, so a host can show it in its window
   CreateSettingsPanel = function(parent)
     return JS.CreateSettingsPanel(parent)
   end,
 
-  -- The reverse direction: hand us the host's own settings panel builder and a
-  -- switcher appears in our Settings tab to flip between the two.
-  -- provider.label  button text, e.g. "Oathbound"
-  -- provider.Create function(parent) -> frame filling parent, ideally with Refresh()
+  -- The reverse: a host's panel builder, which adds a switcher to our Settings tab
   SetSettingsProvider = function(provider)
     return JS.SetSettingsProvider(provider)
   end,

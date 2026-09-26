@@ -1,10 +1,8 @@
 local _, JS = ...
 
--- Slash command registration
 SLASH_JEMISTATS1 = "/jemistats"
 SLASH_JEMISTATS2 = "/jstats"
 
--- Print the command list
 local function PrintHelp()
   JS.Msg("Commands:")
   JS.Msg("  |cffffd100/jstats|r - open or close the stats window")
@@ -15,24 +13,19 @@ local function PrintHelp()
 end
 
 SlashCmdList["JEMISTATS"] = function(msg)
-  -- Normalize input
   msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
 
-  -- Command list
   if msg == "help" or msg == "?" then
     PrintHelp()
     return
   end
 
-  -- Settings tab
   if msg == "settings" or msg == "config" or msg == "options" then
     JS.OpenSettingsWindow()
     return
   end
 
-  -- Minimap icon toggle
-  -- Routed through the setting rather than straight at the icon, so the
-  -- checkbox in the Settings tab stays in step with the command
+  -- Routed through the setting, so the Settings checkbox stays in step
   if msg == "minimap" then
     if JS.HostLoaded() then
       JS.Msg("The minimap icon is hidden while " .. JS.HostName() .. " is loaded. Use its icon instead.")
@@ -45,7 +38,6 @@ SlashCmdList["JEMISTATS"] = function(msg)
     return
   end
 
-  -- Session-only reset
   if msg == "sessionreset" then
     JS.ResetSessionStats()
     JS.Stats.RefreshPanelIfVisible()
@@ -53,14 +45,12 @@ SlashCmdList["JEMISTATS"] = function(msg)
     return
   end
 
-  -- Full stats reset
   if msg == "reset" then
     JS.ResetCharacterStats()
     JS.Msg("Stats reset done for this character.")
     return
   end
 
-  -- Anything unrecognised shows the command list
   if msg ~= "" then
     PrintHelp()
     return

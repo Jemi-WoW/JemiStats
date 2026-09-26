@@ -1,7 +1,6 @@
 local _, JS = ...
 
--- Demons are summoned, so SPELL_SUMMON from the player catches every pet
--- (Imp, Voidwalker, Succubus, Felhunter, Infernal, ...) without a spell list.
+-- SPELL_SUMMON from the player catches every demon, so no spell list.
 JS.RegisterClassCastStat({
   key = "demonsSummoned",
   class = "WARLOCK",

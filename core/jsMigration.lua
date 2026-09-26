@@ -1,8 +1,6 @@
 local _, JS = ...
 
--- One-time import of stats tracked by Oathbound before the split
--- Oathbound stored stats per character under the same key names, so this is a
--- straight copy. It runs before anything else touches the stats table.
+-- One-time import of Oathbound's stats; same key names, so a straight copy.
 
 local SOURCE_ADDON = "Oathbound"
 
@@ -18,9 +16,7 @@ local function CopyTable(source)
   return out
 end
 
--- Oathbound's saved stats for this character, or nil
--- OathboundDB only exists in memory when Oathbound itself is loaded, so a user
--- who removed it before this ever ran has nothing to import.
+-- Oathbound's saved stats for this character; only in memory while it is loaded.
 local function ReadSourceStats()
   local db = _G.OathboundDB
   if type(db) ~= "table" or type(db.chars) ~= "table" then
@@ -42,9 +38,7 @@ end
 function JS.RunStatsMigration()
   local d = JS.DB()
 
-  -- Anything already tracked here wins, the import is only for a first run.
-  -- The flag alone is not enough to skip on: an interrupted run could set it
-  -- with nothing imported, and that would lose the old records for good.
+  -- Not the flag alone: an interrupted run could set it having imported nothing
   local hasOwnStats = type(d.stats) == "table" and next(d.stats) ~= nil
 
   if d.statsMigrated and hasOwnStats then
@@ -56,8 +50,7 @@ function JS.RunStatsMigration()
     return false
   end
 
-  -- Nothing of ours yet. Leave the flag alone while the source is missing, so
-  -- installing it later still imports.
+  -- Flag left alone while the source is missing, so installing it later imports
   if not JS.IsAddOnLoaded(SOURCE_ADDON) then
     return false
   end

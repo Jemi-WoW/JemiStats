@@ -26,9 +26,7 @@ f:RegisterEvent("QUEST_TURNED_IN")
 f:RegisterUnitEvent("UNIT_HEALTH", "player")
 f:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
 
--- Combat log fan-out
--- The event is unpacked once here and handed to every consumer, instead of each
--- tracker calling CombatLogGetCurrentEventInfo again.
+-- Unpacked once and handed to every tracker, rather than each re-fetching it.
 local function DispatchCombatLog(timestamp, subevent, hideCaster,
                                  srcGUID, srcName, srcFlags, srcRaidFlags,
                                  dstGUID, dstName, dstFlags, dstRaidFlags, ...)
@@ -66,8 +64,7 @@ f:SetScript("OnEvent", function(self, event, ...)
       JS.Msg("Loaded. Use /jstats or minimap icon. By Jemi")
     end
 
-    -- Delayed a beat so a host addon has finished registering its panel opener
-    -- and the window lands wherever it is actually meant to live
+    -- Delayed so a host has registered its opener and the window lands right
     if JS.GetSetting("openOnLogin") then
       C_Timer.After(1.0, function()
         JS.OpenStats()
@@ -84,7 +81,9 @@ f:SetScript("OnEvent", function(self, event, ...)
   end
 
   if event == "QUEST_ACCEPTED" then
-    local _, questID = ...
+    -- Classic passes (questLogIndex, questID), the modern codebase only (questID)
+    local first, second = ...
+    local questID = second or first
     if JS.RecordQuestAccepted then
       JS.RecordQuestAccepted(questID)
     end
