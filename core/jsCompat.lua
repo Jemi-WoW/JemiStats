@@ -90,6 +90,17 @@ end
 
 -- Probed with a throwaway unnamed frame, so a failed try never burns a name.
 local templateCache = {}
+local probeParent
+
+-- Probes hang off a hidden frame, because a frame is created shown and several
+-- templates run an OnShow that errors before their text or data is set.
+local function ProbeParent()
+  if not probeParent then
+    probeParent = CreateFrame("Frame", nil, UIParent)
+    probeParent:Hide()
+  end
+  return probeParent
+end
 
 local function TemplateExists(frameType, template)
   local cacheKey = frameType .. "\0" .. template
@@ -98,11 +109,7 @@ local function TemplateExists(frameType, template)
     return cached
   end
 
-  local ok, frame = pcall(CreateFrame, frameType, nil, UIParent, template)
-  if ok and frame then
-    frame:Hide()
-    frame:SetParent(nil)
-  end
+  local ok = pcall(CreateFrame, frameType, nil, ProbeParent(), template)
 
   templateCache[cacheKey] = ok and true or false
   return templateCache[cacheKey]

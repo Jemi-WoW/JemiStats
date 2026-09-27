@@ -121,6 +121,10 @@ local TAB_TEMPLATES = { "CharacterFrameTabButtonTemplate", "PanelTabButtonTempla
 function JS.CreateMainFrame()
   local frame, frameTemplate = JS.CreateFromTemplates("Frame", "JemiStatsFrame", UIParent, FRAME_TEMPLATES)
 
+  -- Hidden first: a frame is created shown, and everything built under a hidden
+  -- parent skips the template OnShow handlers that run before anything is set up
+  frame:Hide()
+
   -- Nothing to sit in front of on a bare frame, so it brings its own panel art
   if not frameTemplate then
     local bg, canBackdrop = JS.CreateBackdropFrame(frame)
@@ -159,7 +163,6 @@ function JS.CreateMainFrame()
     self:StopMovingOrSizing()
     JS.SaveWindowPosition()
   end)
-  frame:Hide()
 
   frame:SetFrameStrata("DIALOG")
   frame:SetFrameLevel(200)
