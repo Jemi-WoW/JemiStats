@@ -15,10 +15,15 @@ end
 local CREATED = ToPattern(LOOT_ITEM_CREATED_SELF or "You create: %s.")
 local CREATED_MULTIPLE = ToPattern(LOOT_ITEM_CREATED_SELF_MULTIPLE or "You create: %sx%d.")
 
+-- Renamed on the modern codebase, so every name this addon supports is checked
+local PROFESSION_FRAMES = { "TradeSkillFrame", "CraftFrame", "ProfessionsFrame" }
+
 -- Looting a crafted item and crafting it read the same, so the window settles it
 local function ProfessionOpen()
-  if TradeSkillFrame and TradeSkillFrame:IsShown() then return true end
-  if CraftFrame and CraftFrame:IsShown() then return true end
+  for i = 1, #PROFESSION_FRAMES do
+    local frame = _G[PROFESSION_FRAMES[i]]
+    if frame and frame.IsShown and frame:IsShown() then return true end
+  end
   return false
 end
 

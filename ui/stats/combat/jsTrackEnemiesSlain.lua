@@ -125,9 +125,8 @@ function JS.RecordEnemySlain(destGUID)
     s.lastKilledGUIDs[destGUID] = now
   end
 
-  s.enemiesSlain = (tonumber(s.enemiesSlain or 0) or 0) + 1
   CleanupKillCredit(destGUID)
-  Stats.RefreshPanelIfVisible()
+  Stats.IncStat("enemiesSlain", 1)
 end
 
 JS.RegisterStatTracker({

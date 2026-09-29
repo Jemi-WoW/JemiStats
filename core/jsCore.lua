@@ -213,6 +213,44 @@ JS.SETTINGS_DEFS = {
     default = true,
   },
 
+  -- Toast notifications
+  showStatToasts = {
+    key = "showStatToasts",
+    section = "toasts",
+    label = "Show stat toasts",
+    tooltip = "Pop a small notification whenever a tracked stat goes up.\n\nStats that move constantly, like Distance Traveled, never toast.",
+    default = true,
+  },
+  minimalStatToasts = {
+    key = "minimalStatToasts",
+    section = "toasts",
+    label = "Minimal toast style",
+    tooltip = "Show only the change, without the stat's name.\n\nNeeds 'Show stat toasts' switched on.",
+    default = false,
+  },
+  repositionToast = {
+    key = "repositionToast",
+    section = "toasts",
+    type = "button",
+    label = "Reposition toasts",
+    buttonText = "Move Toasts",
+    tooltip = "Show a draggable marker where toasts appear, then press Confirm to keep the new spot.",
+    onClick = function()
+      if JS.EnableToastRepositioning then JS.EnableToastRepositioning() end
+    end,
+  },
+  resetToastPosition = {
+    key = "resetToastPosition",
+    section = "toasts",
+    type = "button",
+    label = "Reset toast position",
+    buttonText = "Reset",
+    tooltip = "Put the toasts back where they started.",
+    onClick = function()
+      if JS.ResetToastPosition then JS.ResetToastPosition() end
+    end,
+  },
+
   -- Advanced
   debugMode = {
     key = "debugMode",
@@ -249,6 +287,12 @@ JS.SETTINGS_ORDER = {
     "hideZeroStats",
     "stripedRows",
   },
+  toasts = {
+    "showStatToasts",
+    "minimalStatToasts",
+    "repositionToast",
+    "resetToastPosition",
+  },
   advanced = {
     "debugMode",
   },
@@ -279,6 +323,11 @@ JS.SETTINGS_SECTION_ORDER = {
     key = "display",
     title = "Stats Display",
     desc = "How the Stats tab presents the rows it tracks.",
+  },
+  {
+    key = "toasts",
+    title = "Toast Notifications",
+    desc = "Small pop-ups that appear when a tracked stat goes up. Tick a stat in the Stats tab to add it to the on-screen window instead.",
   },
   {
     key = "advanced",
@@ -379,6 +428,13 @@ function JS.ApplySettingSideEffects(key)
   -- Hot paths read cached copies rather than calling GetSetting per event
   if JS.Stats and JS.Stats.RefreshSettingCache then
     JS.Stats.RefreshSettingCache()
+  end
+
+  if key == "showStatToasts" then
+    if not JS.GetSetting("showStatToasts") and JS.ClearStatToasts then
+      JS.ClearStatToasts()
+    end
+    return
   end
 
   if key == "showMinimapButton" then

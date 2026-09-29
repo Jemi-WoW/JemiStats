@@ -12,25 +12,22 @@ Stats.SURVIVAL_COLORS = SURVIVAL_COLORS
 local function HandleDeath()
   local s = Stats.EnsureStatsDB()
 
-  s.deaths = (tonumber(s.deaths or 0) or 0) + 1
-
   -- The level reached before the first death is what Levels Without Dying reports
   if (tonumber(s.levelAtFirstDeath or 0) or 0) <= 0 then
     s.levelAtFirstDeath = JS.PlayerLevel()
   end
 
   local cause = s._lastEnvironment
-  if cause == "FALLING" then
-    s.deathsByFalling = (tonumber(s.deathsByFalling or 0) or 0) + 1
-  elseif cause == "DROWNING" then
-    s.deathsByDrowning = (tonumber(s.deathsByDrowning or 0) or 0) + 1
-  end
-
   s._lastEnvironment = nil
   s._pendingFall = nil
   s._deadAt = GetTime and GetTime() or 0
 
-  Stats.RefreshPanelIfVisible()
+  Stats.IncStat("deaths", 1)
+  if cause == "FALLING" then
+    Stats.IncStat("deathsByFalling", 1)
+  elseif cause == "DROWNING" then
+    Stats.IncStat("deathsByDrowning", 1)
+  end
 end
 
 JS.RegisterStatTracker({

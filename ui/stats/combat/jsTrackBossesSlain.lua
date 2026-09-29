@@ -34,10 +34,8 @@ local function RecordBossKillName(name)
 end
 
 function JS.RecordBossSlain(name)
-  local s = Stats.EnsureStatsDB()
-  s.bossesSlain = (tonumber(s.bossesSlain or 0) or 0) + 1
   RecordBossKillName(name)
-  Stats.RefreshPanelIfVisible()
+  Stats.IncStat("bossesSlain", 1)
 end
 
 JS.RegisterStatTracker({

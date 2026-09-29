@@ -138,9 +138,8 @@ function JS.RecordZoneVisit(zoneName)
   if s.visitedZones[key] then return end
 
   s.visitedZones[key] = true
-  s.visitedZoneCount = (tonumber(s.visitedZoneCount or 0) or 0) + 1
   Stats.QueueRecordAlert("New zone visited", canonical)
-  Stats.RefreshPanelIfVisible()
+  Stats.IncStat("visitedZoneCount", 1)
 end
 
 local function TrackCurrentZone()

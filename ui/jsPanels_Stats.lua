@@ -144,8 +144,27 @@ function JS.CreateStatsPanel(parent, opts)
       row.bg:SetAllPoints(true)
       row.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
 
+      -- Ticked rows appear in the on-screen window; tracking is unaffected
+      row.check = JS.CreateCheckButton(row)
+      row.check:SetSize(22, 22)
+      row.check:SetPoint("LEFT", 4, 0)
+      row.check:SetHitRectInsets(0, 0, 0, 0)
+      if row.check.Text then
+        row.check.Text:SetText("")
+        row.check.Text:Hide()
+      end
+      row.check:SetScript("OnClick", function(self)
+        JS.SetStatInWindow(def.key, self:GetChecked() and true or false)
+      end)
+      row.check:SetScript("OnEnter", function(self)
+        ShowStatTooltip(self, def.label, "Tick to show this stat in the on-screen window.")
+      end)
+      row.check:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+      end)
+
       row.label = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-      row.label:SetPoint("LEFT", 8, 0)
+      row.label:SetPoint("LEFT", 32, 0)
       row.label:SetJustifyH("LEFT")
       row.label:SetText(def.label)
 
@@ -263,6 +282,10 @@ function JS.CreateStatsPanel(parent, opts)
           value = tracker.getValue(tracker, s)
         else
           value = s[def.key]
+        end
+
+        if w.row.check then
+          w.row.check:SetChecked(JS.IsStatInWindow(def.key))
         end
 
         local lr, lg, lb, vr, vg, vb = Stats.ColorsForKey(def.key)

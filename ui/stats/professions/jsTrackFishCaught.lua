@@ -51,7 +51,7 @@ local function HandleFishingLoot()
 
   s._lootCounted = true
   s._fishingCastAt = 0
-  s.junkFishCaught = (tonumber(s.junkFishCaught or 0) or 0) + junk
+  Stats.IncStat("junkFishCaught", junk)
   Stats.IncStat("fishCaught", caught)
 end
 

@@ -86,11 +86,9 @@ local function SampleAmmoFired()
     local fired = last - current
     local kind = GetEquippedAmmoType()
     if kind == "arrow" then
-      s.arrowsShot = (tonumber(s.arrowsShot or 0) or 0) + fired
-      Stats.RefreshPanelIfVisible()
+      Stats.IncStat("arrowsShot", fired)
     elseif kind == "bullet" then
-      s.bulletsShot = (tonumber(s.bulletsShot or 0) or 0) + fired
-      Stats.RefreshPanelIfVisible()
+      Stats.IncStat("bulletsShot", fired)
     end
   end
 

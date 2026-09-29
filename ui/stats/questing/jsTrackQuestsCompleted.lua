@@ -16,8 +16,7 @@ end
 function JS.RecordQuestCompleted(questID)
   local s = Stats.EnsureStatsDB()
   if not ShouldCountQuest(s.lastQuestCompleted, questID, 0.5) then return end
-  s.questsCompleted = (tonumber(s.questsCompleted or 0) or 0) + 1
-  Stats.RefreshPanelIfVisible()
+  Stats.IncStat("questsCompleted", 1)
 end
 
 JS.RegisterStatTracker({

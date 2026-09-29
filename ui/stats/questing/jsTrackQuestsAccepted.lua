@@ -16,8 +16,7 @@ end
 function JS.RecordQuestAccepted(questID)
   local s = Stats.EnsureStatsDB()
   if not ShouldCountQuest(s.lastQuestAccepted, questID, 0.5) then return end
-  s.questsAccepted = (tonumber(s.questsAccepted or 0) or 0) + 1
-  Stats.RefreshPanelIfVisible()
+  Stats.IncStat("questsAccepted", 1)
 end
 
 JS.RegisterStatTracker({

@@ -14,8 +14,7 @@ function JS.HandleDungeonStateChange()
         name = name,
         enteredAt = now,
       }
-      s.dungeonsEntered = (tonumber(s.dungeonsEntered or 0) or 0) + 1
-      Stats.RefreshPanelIfVisible()
+      Stats.IncStat("dungeonsEntered", 1)
     end
     return
   end
@@ -24,14 +23,12 @@ function JS.HandleDungeonStateChange()
   if cur and cur.mapID then
     local elapsed = now - (tonumber(cur.enteredAt or now) or now)
     if elapsed >= 60 then
-      s.dungeonsCompleted = (tonumber(s.dungeonsCompleted or 0) or 0) + 1
-
       local dungeonName = tostring(cur.name or "")
       if dungeonName ~= "" then
         s.completedDungeons[dungeonName] = (tonumber(s.completedDungeons[dungeonName] or 0) or 0) + 1
       end
 
-      Stats.RefreshPanelIfVisible()
+      Stats.IncStat("dungeonsCompleted", 1)
     end
   end
   s.currentDungeon = nil

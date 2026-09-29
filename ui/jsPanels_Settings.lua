@@ -109,6 +109,45 @@ local function ApplySettingRowState(check, hovered)
   end
 end
 
+-- A row that runs an action instead of storing a value
+local function CreateActionRow(parent, def)
+  local row = CreateFrame("Button", nil, parent)
+  row:SetHeight(ROW_H)
+  row:EnableMouse(true)
+
+  local labelFS = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  labelFS:SetJustifyH("LEFT")
+  labelFS:SetJustifyV("MIDDLE")
+  labelFS:SetTextColor(GOLD[1], GOLD[2], GOLD[3])
+  labelFS:SetText(def.label)
+
+  local button = JS.CreatePanelButton(row)
+  button:SetSize(110, 22)
+  button:SetText(def.buttonText or "Go")
+  StyleAddonButton(button)
+  button:SetScript("OnClick", function()
+    if type(def.onClick) == "function" then
+      pcall(def.onClick)
+    end
+  end)
+
+  row:SetScript("OnEnter", function(self)
+    ShowTooltipNear(self, def.label, def.tooltip or "")
+  end)
+  row:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+  end)
+
+  -- Shaped like a checkbox row, so the layout pass can treat them alike
+  local proxy = { isAction = true, row = row, label = labelFS, button = button }
+  proxy.searchText = NormalizeText((def.label or "") .. " " .. (def.tooltip or ""))
+  proxy.GetChecked = function() return false end
+  proxy.SetChecked = function() end
+  proxy.SetAlpha = function() end
+
+  return proxy
+end
+
 -- The whole row is the button, so clicking anywhere along it toggles the option.
 local function CreateCheckbox(parent, def)
   local row = CreateFrame("Button", nil, parent)
@@ -314,13 +353,17 @@ local function LayoutSection(section, width, query)
   section.header:SetWidth(width)
 
   local totalChecks = #section.checks
-  local checkedCount = 0
+  local checkedCount, toggleCount = 0, 0
   for i = 1, totalChecks do
-    if section.checks[i]:GetChecked() then
-      checkedCount = checkedCount + 1
+    local entry = section.checks[i]
+    if not entry.isAction then
+      toggleCount = toggleCount + 1
+      if entry:GetChecked() then
+        checkedCount = checkedCount + 1
+      end
     end
   end
-  section.countText:SetText(string.format("%d/%d", checkedCount, totalChecks))
+  section.countText:SetText(string.format("%d/%d", checkedCount, toggleCount))
 
   wipe(section.visibleChecks)
 
@@ -388,14 +431,23 @@ local function LayoutSection(section, width, query)
       check.hover:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
     end
 
-    check:ClearAllPoints()
-    check:SetPoint("LEFT", row, "LEFT", 0, 0)
-    check:SetSize(26, 26)
+    if check.isAction then
+      check.label:ClearAllPoints()
+      check.label:SetPoint("LEFT", row, "LEFT", 4, 0)
+      check.label:SetHeight(ROW_H)
 
-    check.label:ClearAllPoints()
-    check.label:SetPoint("LEFT", check, "RIGHT", 8, 0)
-    check.label:SetPoint("RIGHT", row, "RIGHT", -8, 0)
-    check.label:SetHeight(ROW_H)
+      check.button:ClearAllPoints()
+      check.button:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+    else
+      check:ClearAllPoints()
+      check:SetPoint("LEFT", row, "LEFT", 0, 0)
+      check:SetSize(26, 26)
+
+      check.label:ClearAllPoints()
+      check.label:SetPoint("LEFT", check, "RIGHT", 8, 0)
+      check.label:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+      check.label:SetHeight(ROW_H)
+    end
 
     y = y - ROW_H
   end
@@ -479,7 +531,9 @@ function JS.CreateSettingsPanel(parent)
     for _, key in ipairs(order) do
       local def = JS.GetSettingDef(key)
       if def then
-        local check = CreateCheckbox(section.body, def)
+        local check = (def.type == "button")
+          and CreateActionRow(section.body, def)
+          or CreateCheckbox(section.body, def)
         section.checks[#section.checks + 1] = check
         checksByKey[key] = check
       end
@@ -589,10 +643,12 @@ function JS.CreateSettingsPanel(parent)
     EnsurePanelState()
 
     for key, check in pairs(checksByKey) do
-      check.isDisabled = JS.IsSettingDisabled(key)
-      check:SetChecked(JS.GetSetting(key))
-      check:SetAlpha(check.isDisabled and 0.5 or 1.0)
-      ApplySettingRowState(check, false)
+      if not check.isAction then
+        check.isDisabled = JS.IsSettingDisabled(key)
+        check:SetChecked(JS.GetSetting(key))
+        check:SetAlpha(check.isDisabled and 0.5 or 1.0)
+        ApplySettingRowState(check, false)
+      end
     end
 
     hint:SetShown((search:GetText() or "") == "")

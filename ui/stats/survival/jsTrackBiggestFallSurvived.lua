@@ -10,9 +10,8 @@ local function ConfirmFall(amount)
   local s = Stats.EnsureStatsDB()
   if amount <= (tonumber(s.biggestFallSurvived or 0) or 0) then return end
 
-  s.biggestFallSurvived = amount
+  Stats.SetStat("biggestFallSurvived", amount)
   Stats.QueueRecordAlert("New biggest fall survived", Stats.FormatNumber(amount))
-  Stats.RefreshPanelIfVisible()
 end
 
 JS.RegisterStatTracker({

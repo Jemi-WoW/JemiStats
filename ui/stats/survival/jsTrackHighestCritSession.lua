@@ -25,13 +25,13 @@ function JS.RecordHighestCrit(amount)
   local changed = false
 
   if amount > (tonumber(s.highestCritSession or 0) or 0) then
-    s.highestCritSession = amount
+    Stats.SetStat("highestCritSession", amount)
     Stats.QueueRecordAlert("New highest crit this session", Stats.FormatNumber(amount))
     changed = true
   end
 
   if amount > (tonumber(s.highestCritEver or 0) or 0) then
-    s.highestCritEver = amount
+    Stats.SetStat("highestCritEver", amount)
     changed = true
   end
 
@@ -51,26 +51,26 @@ function JS.FlushPendingStatRecords()
   local pendingCrit = tonumber(p.highestCritSession or 0) or 0
   if pendingCrit > 0 then
     if pendingCrit > (tonumber(s.highestCritSession or 0) or 0) then
-      s.highestCritSession = pendingCrit
+      Stats.SetStat("highestCritSession", pendingCrit)
       Stats.QueueRecordAlert("New highest crit this session", Stats.FormatNumber(pendingCrit))
       changed = true
     end
     if pendingCrit > (tonumber(s.highestCritEver or 0) or 0) then
-      s.highestCritEver = pendingCrit
+      Stats.SetStat("highestCritEver", pendingCrit)
       changed = true
     end
   end
 
   local pendingLowSession = tonumber(p.lowestHPPctSession or 100) or 100
   if pendingLowSession < (tonumber(s.lowestHPPctSession or 100) or 100) then
-    s.lowestHPPctSession = pendingLowSession
+    Stats.SetStat("lowestHPPctSession", pendingLowSession)
     Stats.QueueRecordAlert("New lowest HP this session", Stats.FormatPercent(pendingLowSession))
     changed = true
   end
 
   local pendingLowEver = tonumber(p.lowestHPPctEver or 100) or 100
   if pendingLowEver < (tonumber(s.lowestHPPctEver or 100) or 100) then
-    s.lowestHPPctEver = pendingLowEver
+    Stats.SetStat("lowestHPPctEver", pendingLowEver)
     Stats.QueueRecordAlert("New lowest HP ever", Stats.FormatPercent(pendingLowEver))
     changed = true
   end

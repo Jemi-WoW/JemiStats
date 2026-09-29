@@ -27,13 +27,13 @@ function JS.RecordLowestHP(unit)
   local changed = false
 
   if pct < (tonumber(s.lowestHPPctSession or 100) or 100) then
-    s.lowestHPPctSession = pct
+    Stats.SetStat("lowestHPPctSession", pct)
     Stats.QueueRecordAlert("New lowest HP this session", Stats.FormatPercent(pct))
     changed = true
   end
 
   if pct < (tonumber(s.lowestHPPctEver or 100) or 100) then
-    s.lowestHPPctEver = pct
+    Stats.SetStat("lowestHPPctEver", pct)
     Stats.QueueRecordAlert("New lowest HP ever", Stats.FormatPercent(pct))
     changed = true
   end

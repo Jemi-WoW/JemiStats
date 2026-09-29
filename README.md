@@ -31,6 +31,16 @@ Runs on **Classic Era**, **Burning Crusade Classic** and **WoW Forever** from th
 
 Deaths are tracked too, so the addon reads the same on a normal character as it does on Hardcore.
 
+## **On-screen window and toasts**
+
+Tick the box to the left of any stat on the Stats tab and it joins a small window on your screen. Untick them all and the window goes away. Ticking a stat only decides whether it is *shown* there - everything keeps tracking either way. Drag the window wherever you like.
+
+The window shows your portrait and name, sizes itself to whatever you put in it, and scrolls once the list passes fourteen rows. A fresh character starts with a handful already ticked.
+
+Toasts pop up whenever a tracked stat goes up. Repeated hits on the same stat fold into one, so a busy pull reads `+5 Enemies Slain` rather than five separate pop-ups. Stats that move constantly, like Distance Traveled, never toast.
+
+Both live under **Settings - Toast Notifications**, along with a minimal style and a button to move the toasts.
+
 ## **Commands**
 
 *   `/jemistats` or `/jstats` - open or close the window
@@ -38,6 +48,8 @@ Deaths are tracked too, so the addon reads the same on a normal character as it 
 *   `/jstats reset` - wipe this character's tracked stats
 *   `/jstats sessionreset` - reset session-only stats
 *   `/jstats minimap` - toggle the minimap icon
+*   `/jstats toast` - move where toasts appear
+*   `/jstats window` - put the on-screen window back in its corner
 
 ## **WoW Forever notes**
 

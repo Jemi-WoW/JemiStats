@@ -27,7 +27,6 @@ JS.RegisterStatTracker({
     local money = tonumber(GetMoney() or 0) or 0
     if money <= (tonumber(s.highestGoldHeld or 0) or 0) then return end
 
-    s.highestGoldHeld = money
-    Stats.RefreshPanelIfVisible()
+    Stats.SetStat("highestGoldHeld", money)
   end,
 })

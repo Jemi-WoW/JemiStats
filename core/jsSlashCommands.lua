@@ -8,6 +8,8 @@ local function PrintHelp()
   JS.Msg("  |cffffd100/jstats|r - open or close the stats window")
   JS.Msg("  |cffffd100/jstats settings|r - open the settings tab")
   JS.Msg("  |cffffd100/jstats minimap|r - toggle the minimap icon")
+  JS.Msg("  |cffffd100/jstats toast|r - move where toasts appear")
+  JS.Msg("  |cffffd100/jstats window|r - put the on-screen window back in its corner")
   JS.Msg("  |cffffd100/jstats sessionreset|r - reset this session's stats only")
   JS.Msg("  |cffffd100/jstats reset|r - wipe this character's tracked stats")
 end
@@ -35,6 +37,19 @@ SlashCmdList["JEMISTATS"] = function(msg)
     local show = not JS.GetSetting("showMinimapButton")
     JS.SetSetting("showMinimapButton", show, "slash")
     JS.Msg("Minimap icon " .. (show and "shown." or "hidden."))
+    return
+  end
+
+  if msg == "toast" then
+    JS.EnableToastRepositioning()
+    JS.Msg("Drag the marker, then press Confirm.")
+    return
+  end
+
+  if msg == "window" then
+    JemiStatsDB.statsWindow = nil
+    JS.RestoreStatsWindowPosition()
+    JS.Msg("On-screen window position reset.")
     return
   end
 

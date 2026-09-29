@@ -40,6 +40,10 @@ f:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
 f:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", "player")
 f:RegisterUnitEvent("UNIT_AURA", "player")
 
+-- Not on every client, and an unknown event name would throw
+pcall(f.RegisterUnitEvent, f, "UNIT_PORTRAIT_UPDATE", "player")
+pcall(f.RegisterEvent, f, "PORTRAITS_UPDATED")
+
 -- Unpacked once and handed to every tracker, rather than each re-fetching it.
 local function DispatchCombatLog(timestamp, subevent, hideCaster,
                                  srcGUID, srcName, srcFlags, srcRaidFlags,
@@ -73,6 +77,14 @@ f:SetScript("OnEvent", function(self, event, ...)
 
     JS.HandleStatsPlayerLogin()
     JS.CreateMinimapButton()
+    JS.CreateToastFrame()
+    JS.CreateStatsWindow()
+
+    C_Timer.After(2.0, function()
+      if JS.RefreshStatsWindowPortrait then
+        JS.RefreshStatsWindowPortrait()
+      end
+    end)
 
     if not JS.HostLoaded() and JS.GetSetting("loginMessage") then
       JS.Msg("Loaded. Use /jstats or minimap icon. By Jemi")
@@ -112,7 +124,17 @@ f:SetScript("OnEvent", function(self, event, ...)
     return
   end
 
+  if event == "UNIT_PORTRAIT_UPDATE" or event == "PORTRAITS_UPDATED" then
+    if JS.RefreshStatsWindowPortrait then
+      JS.RefreshStatsWindowPortrait()
+    end
+    return
+  end
+
   if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED" or event == "ZONE_CHANGED_INDOORS" or event == "ZONE_CHANGED_NEW_AREA" then
+    if JS.RefreshStatsWindowPortrait then
+      JS.RefreshStatsWindowPortrait()
+    end
     Stats.EnsureUIFrameHooks()
     Stats.DispatchEvent(event, ...)
     return

@@ -368,15 +368,19 @@ Stats.MigrateLegacyStatsState = MigrateLegacyStatsState
 
 -- Fully reset this character's stats without touching any other saved data.
 function JS.ResetCharacterStats()
-  local d = JS.DB()
-  d.stats = nil
+  local s
 
-  local s = EnsureStatsDB()
-  s.lastMoney = GetMoney and (GetMoney() or 0) or 0
-  s.lastPosX = nil
-  s.lastPosY = nil
-  s.lastPosInstanceID = nil
-  s.lastJumpCountAt = 0
+  Stats.SuppressNotifications(function()
+    local d = JS.DB()
+    d.stats = nil
+
+    s = EnsureStatsDB()
+    s.lastMoney = GetMoney and (GetMoney() or 0) or 0
+    s.lastPosX = nil
+    s.lastPosY = nil
+    s.lastPosInstanceID = nil
+    s.lastJumpCountAt = 0
+  end)
 
   Stats.RefreshPanelIfVisible()
   return s
@@ -543,14 +547,51 @@ end
 
 Stats.EnsurePendingCombatStats = EnsurePendingCombatStats
 
+-- Both writers report to Stats.OnStatChanged, which core/jsNotify.lua fills in.
+local suppressDepth = 0
+
+-- Resets rewrite dozens of keys at once, and none of that is news
+function Stats.SuppressNotifications(fn)
+  suppressDepth = suppressDepth + 1
+  local ok, err = pcall(fn)
+  suppressDepth = suppressDepth - 1
+  if not ok then error(err, 0) end
+end
+
+local function NotifyChanged(key, newValue, oldValue)
+  if suppressDepth > 0 then return end
+  if not Stats.OnStatChanged then return end
+  Stats.OnStatChanged(key, newValue, oldValue)
+end
+
 local function IncStat(key, amount)
-  local s = EnsureStatsDB()
   amount = tonumber(amount or 1) or 1
-  s[key] = (tonumber(s[key] or 0) or 0) + amount
+  if amount == 0 then return end
+
+  local s = EnsureStatsDB()
+  local old = tonumber(s[key] or 0) or 0
+  local new = old + amount
+
+  s[key] = new
+  NotifyChanged(key, new, old)
+  Stats.RefreshPanelIfVisible()
+end
+
+-- For records, which replace the value rather than adding to it
+local function SetStat(key, value)
+  value = tonumber(value or 0) or 0
+
+  local s = EnsureStatsDB()
+  local old = tonumber(s[key] or 0) or 0
+  if value == old then return end
+
+  s[key] = value
+  NotifyChanged(key, value, old)
   Stats.RefreshPanelIfVisible()
 end
 
 Stats.IncStat = IncStat
+Stats.SetStat = SetStat
 
 local function ShortUISpamKey(name)
   return "STAT_UI_" .. tostring(name or "unknown")
@@ -662,9 +703,16 @@ function JS.HandleStatsPlayerLogin()
   EnsureUIFrameHooks()
   ForEachTracker("OnPlayerLogin", preserveSession)
   Stats.RefreshPanelIfVisible()
+  if JS.RebuildStatsWindow then
+    JS.RebuildStatsWindow()
+  end
 end
 
 function JS.ResetSessionStats()
+  Stats.SuppressNotifications(JS.ResetSessionStatsNow)
+end
+
+function JS.ResetSessionStatsNow()
   local s = EnsureStatsDB()
   s.highestCritSession = 0
   s.lowestHPPctSession = 100
@@ -879,4 +927,7 @@ end
 C_Timer.NewTicker(1.0, function()
   Stats.DispatchUpdate(1.0)
   Stats.RefreshPanelIfVisible()
+  if JS.RefreshStatsWindow then
+    JS.RefreshStatsWindow()
+  end
 end)

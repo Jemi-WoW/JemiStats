@@ -9,12 +9,10 @@ local function HandleMoneyChanged()
   local diff = money - prev
 
   if diff > 0 then
-    s.goldEarnedSession = (tonumber(s.goldEarnedSession or 0) or 0) + diff
-    s.goldEarnedTotal = (tonumber(s.goldEarnedTotal or 0) or 0) + diff
-    Stats.RefreshPanelIfVisible()
+    Stats.IncStat("goldEarnedSession", diff)
+    Stats.IncStat("goldEarnedTotal", diff)
   elseif diff < 0 then
-    s.goldSpentTotal = (tonumber(s.goldSpentTotal or 0) or 0) + math.abs(diff)
-    Stats.RefreshPanelIfVisible()
+    Stats.IncStat("goldSpentTotal", math.abs(diff))
   end
 
   s.lastMoney = money

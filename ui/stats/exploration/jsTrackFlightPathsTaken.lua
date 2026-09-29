@@ -7,8 +7,7 @@ local function HandleTaxiStateCheck()
 
   if onTaxi and not s._onTaxi then
     s._onTaxi = true
-    s.flightPathsTaken = (tonumber(s.flightPathsTaken or 0) or 0) + 1
-    Stats.RefreshPanelIfVisible()
+    Stats.IncStat("flightPathsTaken", 1)
     return
   end
 
