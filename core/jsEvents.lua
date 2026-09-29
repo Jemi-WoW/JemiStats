@@ -21,10 +21,24 @@ f:RegisterEvent("PLAYER_REGEN_DISABLED")
 f:RegisterEvent("PLAYER_REGEN_ENABLED")
 f:RegisterEvent("QUEST_ACCEPTED")
 f:RegisterEvent("QUEST_TURNED_IN")
+f:RegisterEvent("PLAYER_DEAD")
+f:RegisterEvent("PLAYER_UNGHOST")
+f:RegisterEvent("PLAYER_ALIVE")
+f:RegisterEvent("PLAYER_LEVEL_UP")
+f:RegisterEvent("CHAT_MSG_SYSTEM")
+f:RegisterEvent("CHAT_MSG_LOOT")
+f:RegisterEvent("MERCHANT_SHOW")
+f:RegisterEvent("MERCHANT_CLOSED")
+f:RegisterEvent("CONFIRM_SUMMON")
+f:RegisterEvent("LOOT_READY")
+f:RegisterEvent("LOOT_CLOSED")
 
 -- Player-only events, filtered by the client instead of by us
 f:RegisterUnitEvent("UNIT_HEALTH", "player")
 f:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
+f:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
+f:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", "player")
+f:RegisterUnitEvent("UNIT_AURA", "player")
 
 -- Unpacked once and handed to every tracker, rather than each re-fetching it.
 local function DispatchCombatLog(timestamp, subevent, hideCaster,

@@ -121,8 +121,7 @@ local TAB_TEMPLATES = { "CharacterFrameTabButtonTemplate", "PanelTabButtonTempla
 function JS.CreateMainFrame()
   local frame, frameTemplate = JS.CreateFromTemplates("Frame", "JemiStatsFrame", UIParent, FRAME_TEMPLATES)
 
-  -- Hidden first: a frame is created shown, and everything built under a hidden
-  -- parent skips the template OnShow handlers that run before anything is set up
+  -- Hidden first: a frame is created shown, and children skip OnShow while it is
   frame:Hide()
 
   -- Nothing to sit in front of on a bare frame, so it brings its own panel art

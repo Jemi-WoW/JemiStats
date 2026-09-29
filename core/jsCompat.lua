@@ -92,8 +92,7 @@ end
 local templateCache = {}
 local probeParent
 
--- Probes hang off a hidden frame, because a frame is created shown and several
--- templates run an OnShow that errors before their text or data is set.
+-- Probes hang off a hidden frame, so no template's OnShow ever runs on one.
 local function ProbeParent()
   if not probeParent then
     probeParent = CreateFrame("Frame", nil, UIParent)
@@ -214,6 +213,61 @@ function JS.GetInventorySlot(slotName)
   if not ok then return nil end
 
   return slot
+end
+
+-- Player buff name at an index, or nil past the last one
+local cGetBuffData = C_UnitAuras and C_UnitAuras.GetBuffDataByIndex
+local rawUnitBuff = _G.UnitBuff
+
+function JS.GetPlayerBuffName(index)
+  if cGetBuffData then
+    local aura = cGetBuffData("player", index)
+    return aura and aura.name or nil
+  end
+
+  if rawUnitBuff then
+    return (rawUnitBuff("player", index))
+  end
+
+  return nil
+end
+
+-- Item quality from a link, 0 for poor
+local rawGetItemInfo = (C_Item and C_Item.GetItemInfo) or _G.GetItemInfo
+
+function JS.GetItemQuality(itemLink)
+  if not itemLink or not rawGetItemInfo then return nil end
+  local _, _, quality = rawGetItemInfo(itemLink)
+  return quality
+end
+
+-- Hook a table's method only when this client has it
+function JS.HookTableFunc(tbl, key, callback)
+  if type(tbl) ~= "table" or type(callback) ~= "function" then return false end
+  if type(tbl[key]) ~= "function" then return false end
+  hooksecurefunc(tbl, key, callback)
+  return true
+end
+
+-- Selling and using bag items, moved into C_Container on the newer clients
+function JS.HookContainerItemUse(callback)
+  if C_Container and JS.HookTableFunc(C_Container, "UseContainerItem", callback) then
+    return true
+  end
+  return JS.HookGlobal("UseContainerItem", callback)
+end
+
+function JS.GetContainerItemID(bag, slot)
+  local fn = (C_Container and C_Container.GetContainerItemID) or _G.GetContainerItemID
+  if not fn then return nil end
+  return fn(bag, slot)
+end
+
+-- Posting an auction, renamed on the modern codebase
+function JS.HookAuctionPost(callback)
+  if JS.HookGlobal("PostAuction", callback) then return true end
+  if C_AuctionHouse and JS.HookTableFunc(C_AuctionHouse, "PostItem", callback) then return true end
+  return false
 end
 
 -- Hook a global function only when it actually exists on this client

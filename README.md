@@ -19,13 +19,17 @@ Runs on **Classic Era**, **Burning Crusade Classic** and **WoW Forever** from th
 
 ## **What it tracks**
 
-*   **Survival** - highest crit, lowest HP, missed attacks
-*   **Combat** - enemies, rares, elites, bosses, dungeons, average fight length
-*   **Exploration** - distance travelled, zones visited, flight paths, jumps
+*   **Survival** - highest crit, lowest HP, missed attacks, deaths and what killed you, biggest fall survived
+*   **Combat** - enemies, rares, elites, bosses, dungeons, average fight length, killing blows, interrupts, dispels, resurrections, duels
+*   **Exploration** - distance travelled, zones visited, flight paths, jumps, hearthstones, summons
 *   **Class stats** - a tracked signature ability for every class
-*   **Economy** - gold earned and spent, chests opened
+*   **Professions** - nodes gathered, fish caught, bandages used
+*   **Economy** - gold earned and spent, highest gold held, chests, vendor sales, auctions, crafting
 *   **Questing** - quests accepted and completed
+*   **Habits** - food, drink, alcohol and emotes
 *   **Interface habits** - how often you open the map, bags and talents
+
+Deaths are tracked too, so the addon reads the same on a normal character as it does on Hardcore.
 
 ## **Commands**
 
@@ -35,15 +39,9 @@ Runs on **Classic Era**, **Burning Crusade Classic** and **WoW Forever** from th
 *   `/jstats sessionreset` - reset session-only stats
 *   `/jstats minimap` - toggle the minimap icon
 
-## **Forever notes**
+## **WoW Forever notes**
 
-Forever serves vanilla content on the modern codebase, so it reports itself as Retail and a few things behave differently there.
-
-- **Stats may not persist between launches.** The beta client writes SavedVariables on logout but does not read them back, so the addon can start from defaults every session. This is a client bug, not an addon bug.
-- Zones Visited counts the 40 vanilla zones, same as Classic Era.
-- Arrows Shot and Bullets Shot stay at zero. The modern codebase has no ammo slot to sample.
-- Times Checked Talents stays at zero while the spellbook and talents share one frame, because there is no way to tell the two apart. Opening it counts as a spellbook open.
-- `ReloadUI()` is protected on the beta. Type `/reload` instead. Either way the session stats survive the reload.
+Forever serves vanilla content on the modern codebase, so it reports itself as Retail and a few things behave differently there. Please expect bugs/issues.
 
 ## **Works with Oathbound**
 

@@ -47,14 +47,16 @@ Stats.trackersByKey = Stats.trackersByKey or {}
 -- Split by callback, so the hot paths only touch the trackers that care
 Stats.combatLogTrackers = Stats.combatLogTrackers or {}
 Stats.updateTrackers = Stats.updateTrackers or {}
-Stats.categoryOrder = { "survival", "combat", "exploration", "class", "economy", "questing", "oathbound" }
+Stats.categoryOrder = { "survival", "combat", "exploration", "class", "professions", "economy", "questing", "habits", "oathbound" }
 Stats.categoryLabels = {
   survival = "SURVIVAL",
   combat = "COMBAT",
   exploration = "EXPLORATION",
   class = "CLASS STATS",
+  professions = "PROFESSIONS",
   economy = "ECONOMY",
   questing = "QUESTING",
+  habits = "HABITS",
   oathbound = "OATHBOUND",
 }
 
@@ -65,6 +67,12 @@ Stats.rowOrderByCategory = {
     lowestHPPctSession = 30,
     lowestHPPctEver = 40,
     missedAttacks = 50,
+    deaths = 60,
+    deathsByFalling = 70,
+    deathsByDrowning = 80,
+    biggestFallSurvived = 90,
+    timesResurrected = 100,
+    levelsWithoutDying = 110,
   },
   combat = {
     enemiesSlain = 10,
@@ -72,9 +80,15 @@ Stats.rowOrderByCategory = {
     elitesSlain = 30,
     rareElitesSlain = 40,
     bossesSlain = 50,
+    killingBlows = 55,
     combatDurationAverage = 60,
     dungeonsEntered = 70,
     dungeonsCompleted = 80,
+    interrupts = 90,
+    dispels = 100,
+    resurrectionsCast = 110,
+    duelsWon = 120,
+    duelsLost = 130,
   },
   exploration = {
     distanceSession = 10,
@@ -82,12 +96,32 @@ Stats.rowOrderByCategory = {
     visitedZoneCount = 30,
     flightPathsTaken = 40,
     jumps = 50,
+    hearthstonesUsed = 60,
+    summonsAccepted = 70,
+  },
+  professions = {
+    nodesGathered = 10,
+    fishCaught = 20,
+    junkFishCaught = 30,
+    bandagesUsed = 40,
   },
   economy = {
     goldEarnedSession = 10,
     goldEarnedTotal = 20,
     goldSpentTotal = 30,
+    highestGoldHeld = 35,
     chestsOpened = 40,
+    itemsSoldToVendors = 50,
+    auctionsPosted = 60,
+    timesWentBroke = 70,
+    itemsCrafted = 80,
+    itemsDisenchanted = 90,
+  },
+  habits = {
+    foodEaten = 10,
+    drinksDrunk = 20,
+    alcoholDrunk = 30,
+    emotesPerformed = 40,
   },
 }
 
@@ -222,6 +256,41 @@ local function EnsureStatsDB()
   s.combatDurationTotal  = tonumber(s.combatDurationTotal or 0) or 0
   s.combatStartedAt      = tonumber(s.combatStartedAt or 0) or 0
 
+  s.deaths               = tonumber(s.deaths or 0) or 0
+  s.deathsByFalling      = tonumber(s.deathsByFalling or 0) or 0
+  s.deathsByDrowning     = tonumber(s.deathsByDrowning or 0) or 0
+  s.biggestFallSurvived  = tonumber(s.biggestFallSurvived or 0) or 0
+  s.timesResurrected     = tonumber(s.timesResurrected or 0) or 0
+  s.levelAtFirstDeath    = tonumber(s.levelAtFirstDeath or 0) or 0
+
+  s.killingBlows         = tonumber(s.killingBlows or 0) or 0
+  s.interrupts           = tonumber(s.interrupts or 0) or 0
+  s.dispels              = tonumber(s.dispels or 0) or 0
+  s.resurrectionsCast    = tonumber(s.resurrectionsCast or 0) or 0
+  s.duelsWon             = tonumber(s.duelsWon or 0) or 0
+  s.duelsLost            = tonumber(s.duelsLost or 0) or 0
+
+  s.hearthstonesUsed     = tonumber(s.hearthstonesUsed or 0) or 0
+  s.summonsAccepted      = tonumber(s.summonsAccepted or 0) or 0
+
+  s.nodesGathered        = tonumber(s.nodesGathered or 0) or 0
+  s.gatheredByKind       = type(s.gatheredByKind) == "table" and s.gatheredByKind or {}
+  s.fishCaught           = tonumber(s.fishCaught or 0) or 0
+  s.junkFishCaught       = tonumber(s.junkFishCaught or 0) or 0
+  s.bandagesUsed         = tonumber(s.bandagesUsed or 0) or 0
+
+  s.highestGoldHeld      = tonumber(s.highestGoldHeld or 0) or 0
+  s.itemsSoldToVendors   = tonumber(s.itemsSoldToVendors or 0) or 0
+  s.auctionsPosted       = tonumber(s.auctionsPosted or 0) or 0
+  s.timesWentBroke       = tonumber(s.timesWentBroke or 0) or 0
+  s.itemsCrafted         = tonumber(s.itemsCrafted or 0) or 0
+  s.itemsDisenchanted    = tonumber(s.itemsDisenchanted or 0) or 0
+
+  s.foodEaten            = tonumber(s.foodEaten or 0) or 0
+  s.drinksDrunk          = tonumber(s.drinksDrunk or 0) or 0
+  s.alcoholDrunk         = tonumber(s.alcoholDrunk or 0) or 0
+  s.emotesPerformed      = tonumber(s.emotesPerformed or 0) or 0
+
   s.tradesBlocked        = tonumber(s.tradesBlocked or 0) or 0
   s.invitesBlocked       = tonumber(s.invitesBlocked or 0) or 0
   s.mailboxBlocks        = tonumber(s.mailboxBlocks or 0) or 0
@@ -281,6 +350,16 @@ local function MigrateLegacyStatsState()
   s.lastPosInstanceID = nil
   s._onTaxi = false
   s.lastJumpCountAt = 0
+  s._lastEnvironment = nil
+  s._pendingFall = nil
+  s._merchantOpen = false
+  s._summonOfferedAt = nil
+  s._fishingCastAt = 0
+  s._lootCounted = nil
+  s._eating = false
+  s._drinking = false
+  s._pendingAlcohol = nil
+  s._wasBroke = nil
 
   return s
 end
