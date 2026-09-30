@@ -16,6 +16,9 @@ local HEADER_H = 26
 local SCROLL_STEP = 36
 local SWITCH_BTN_W = 94
 local SWITCH_BTN_H = 22
+local SELECTOR_ARROW = 20
+local SELECTOR_BOX_W = 150
+local SELECTOR_BOX_H = 20
 
 -- With a host loaded the same body exists twice, and both must move together.
 local settingsPanels = {}
@@ -46,6 +49,26 @@ end
 local function SetCollapsed(sectionKey, collapsed)
   local state = EnsurePanelState()
   state[sectionKey] = collapsed and true or false
+end
+
+function JS.ScrollToSettingsSection(sectionKey)
+  for i = 1, #settingsPanels do
+    local panel = settingsPanels[i]
+    if panel.ScrollToSection and panel:IsVisible() then
+      panel:ScrollToSection(sectionKey)
+    end
+  end
+end
+
+-- Opens one section, for callers that want a setting in view straight away
+function JS.ExpandSettingsSection(sectionKey)
+  if not sectionKey then return end
+  SetCollapsed(sectionKey, false)
+
+  for i = 1, #settingsPanels do
+    local panel = settingsPanels[i]
+    if panel.Layout then panel:Layout() end
+  end
 end
 
 -- Normalize text for the filter box
@@ -109,6 +132,129 @@ local function ApplySettingRowState(check, hovered)
   end
 end
 
+-- One option per line, the way the game's own multi-choice options read
+local function ShowSelectorTooltip(widget, def, current)
+  GameTooltip:SetOwner(widget, "ANCHOR_TOP")
+  GameTooltip:ClearAllPoints()
+  GameTooltip:SetPoint("BOTTOMLEFT", widget, "TOPLEFT", 0, 10)
+  GameTooltip:SetFrameStrata("TOOLTIP")
+
+  GameTooltip:AddLine(def.label, GOLD[1], GOLD[2], GOLD[3], true)
+  if def.tooltip and def.tooltip ~= "" then
+    GameTooltip:AddLine(def.tooltip, WHITE[1], WHITE[2], WHITE[3], true)
+  end
+
+  for i = 1, #def.options do
+    local option = def.options[i]
+    local name = (option.value == current)
+      and ("|cffffd100" .. option.label .. "|r")
+      or ("|cffffffff" .. option.label .. "|r")
+
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine(name .. ": |cffffd100" .. (option.desc or "") .. "|r",
+      WHITE[1], WHITE[2], WHITE[3], true)
+  end
+
+  GameTooltip:Show()
+end
+
+local function CreateArrow(parent, direction)
+  local square = SquareButton_SetIcon and JS.PickTemplate("Button", { "UIPanelSquareButton" })
+  local btn = CreateFrame("Button", nil, parent, square)
+  btn:SetSize(SELECTOR_ARROW, SELECTOR_ARROW)
+
+  if square then
+    pcall(SquareButton_SetIcon, btn, direction)
+    return btn
+  end
+
+  local page = (direction == "LEFT") and "PrevPage" or "NextPage"
+  btn:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-" .. page .. "-Up")
+  btn:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-" .. page .. "-Down")
+  btn:SetDisabledTexture("Interface\\Buttons\\UI-SpellbookIcon-" .. page .. "-Disabled")
+  btn:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+
+  return btn
+end
+
+-- Arrows either side of the current value, like the game's own settings
+local function CreateSelectorRow(parent, def)
+  local row = CreateFrame("Frame", nil, parent)
+  row:SetHeight(ROW_H)
+  row:EnableMouse(true)
+
+  row.settingKey = def.key
+
+  local labelFS = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  labelFS:SetJustifyH("LEFT")
+  labelFS:SetJustifyV("MIDDLE")
+  labelFS:SetTextColor(GOLD[1], GOLD[2], GOLD[3])
+  labelFS:SetText(def.label)
+
+  local right = CreateArrow(row, "RIGHT")
+  local box = JS.CreateInset(row)
+  box:SetSize(SELECTOR_BOX_W, SELECTOR_BOX_H)
+  local left = CreateArrow(row, "LEFT")
+
+  local valueFS = box:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  valueFS:SetPoint("CENTER", box, "CENTER", 0, 0)
+  valueFS:SetTextColor(GOLD[1], GOLD[2], GOLD[3])
+
+  local selector = {
+    isSelector = true,
+    row = row,
+    label = labelFS,
+    value = valueFS,
+    box = box,
+    left = left,
+    right = right,
+    def = def,
+  }
+
+  local searchWords = def.label or ""
+  for i = 1, #def.options do
+    searchWords = searchWords .. " " .. (def.options[i].label or "")
+  end
+  selector.searchText = NormalizeText(searchWords .. " " .. (def.tooltip or ""))
+
+  local function CurrentIndex()
+    local current = def.get and def.get() or nil
+    for i = 1, #def.options do
+      if def.options[i].value == current then return i end
+    end
+    return 1
+  end
+
+  function selector:Refresh()
+    local index = CurrentIndex()
+    valueFS:SetText(def.options[index].label)
+    left:SetEnabled(index > 1)
+    right:SetEnabled(index < #def.options)
+  end
+
+  local function Step(delta)
+    local index = CurrentIndex() + delta
+    if index < 1 or index > #def.options then return end
+
+    if def.set then def.set(def.options[index].value) end
+    selector:Refresh()
+  end
+
+  left:SetScript("OnClick", function() Step(-1) end)
+  right:SetScript("OnClick", function() Step(1) end)
+
+  local function ShowTip(self)
+    ShowSelectorTooltip(self, def, def.get and def.get() or nil)
+  end
+
+  for _, widget in ipairs({ row, box, left, right }) do
+    widget:SetScript("OnEnter", ShowTip)
+    widget:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  end
+
+  return selector
+end
+
 -- A row that runs an action instead of storing a value
 local function CreateActionRow(parent, def)
   local row = CreateFrame("Button", nil, parent)
@@ -122,7 +268,7 @@ local function CreateActionRow(parent, def)
   labelFS:SetText(def.label)
 
   local button = JS.CreatePanelButton(row)
-  button:SetSize(110, 22)
+  button:SetSize(def.buttonWidth or 110, 22)
   button:SetText(def.buttonText or "Go")
   StyleAddonButton(button)
   button:SetScript("OnClick", function()
@@ -139,7 +285,7 @@ local function CreateActionRow(parent, def)
   end)
 
   -- Shaped like a checkbox row, so the layout pass can treat them alike
-  local proxy = { isAction = true, row = row, label = labelFS, button = button }
+  local proxy = { isAction = true, row = row, label = labelFS, button = button, def = def }
   proxy.searchText = NormalizeText((def.label or "") .. " " .. (def.tooltip or ""))
   proxy.GetChecked = function() return false end
   proxy.SetChecked = function() end
@@ -356,7 +502,7 @@ local function LayoutSection(section, width, query)
   local checkedCount, toggleCount = 0, 0
   for i = 1, totalChecks do
     local entry = section.checks[i]
-    if not entry.isAction then
+    if not entry.isAction and not entry.isSelector then
       toggleCount = toggleCount + 1
       if entry:GetChecked() then
         checkedCount = checkedCount + 1
@@ -431,7 +577,20 @@ local function LayoutSection(section, width, query)
       check.hover:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
     end
 
-    if check.isAction then
+    if check.isSelector then
+      check.label:ClearAllPoints()
+      check.label:SetPoint("LEFT", row, "LEFT", 4, 0)
+      check.label:SetHeight(ROW_H)
+
+      check.right:ClearAllPoints()
+      check.right:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+
+      check.box:ClearAllPoints()
+      check.box:SetPoint("RIGHT", check.right, "LEFT", -2, 0)
+
+      check.left:ClearAllPoints()
+      check.left:SetPoint("RIGHT", check.box, "LEFT", -2, 0)
+    elseif check.isAction then
       check.label:ClearAllPoints()
       check.label:SetPoint("LEFT", row, "LEFT", 4, 0)
       check.label:SetHeight(ROW_H)
@@ -531,9 +690,14 @@ function JS.CreateSettingsPanel(parent)
     for _, key in ipairs(order) do
       local def = JS.GetSettingDef(key)
       if def then
-        local check = (def.type == "button")
-          and CreateActionRow(section.body, def)
-          or CreateCheckbox(section.body, def)
+        local check
+        if def.type == "selector" then
+          check = CreateSelectorRow(section.body, def)
+        elseif def.type == "button" then
+          check = CreateActionRow(section.body, def)
+        else
+          check = CreateCheckbox(section.body, def)
+        end
         section.checks[#section.checks + 1] = check
         checksByKey[key] = check
       end
@@ -643,7 +807,11 @@ function JS.CreateSettingsPanel(parent)
     EnsurePanelState()
 
     for key, check in pairs(checksByKey) do
-      if not check.isAction then
+      if check.isSelector then
+        check:Refresh()
+      elseif check.isAction then
+        -- nothing stored, so nothing to read back
+      else
         check.isDisabled = JS.IsSettingDisabled(key)
         check:SetChecked(JS.GetSetting(key))
         check:SetAlpha(check.isDisabled and 0.5 or 1.0)
@@ -656,6 +824,29 @@ function JS.CreateSettingsPanel(parent)
     C_Timer.After(0, function()
       if panel.Layout then panel:Layout() end
     end)
+  end
+
+  -- Brings a section to the top of the view, so its options are on screen
+  function panel:ScrollToSection(sectionKey)
+    if not sectionKey then return end
+
+    self:Layout()
+
+    local viewport = scroll:GetHeight() or 0
+    if viewport <= 0 then return end
+
+    local offset = 0
+    for i = 1, #sections do
+      local section = sections[i]
+      if section.isVisible then
+        if section.sectionKey == sectionKey then
+          local maxScroll = math.max(0, (content:GetHeight() or 0) - viewport)
+          scroll:SetVerticalScroll(math.min(offset, maxScroll))
+          return
+        end
+        offset = offset + (section:GetHeight() or 0) + SECTION_GAP
+      end
+    end
   end
 
   panel.Refresh = RefreshPanel

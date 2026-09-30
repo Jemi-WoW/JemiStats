@@ -79,6 +79,7 @@ f:SetScript("OnEvent", function(self, event, ...)
     JS.CreateMinimapButton()
     JS.CreateToastFrame()
     JS.CreateStatsWindow()
+    JS.ScheduleTutorial()
 
     C_Timer.After(2.0, function()
       if JS.RefreshStatsWindowPortrait then

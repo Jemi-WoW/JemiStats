@@ -53,6 +53,47 @@ end
 
 JS.ResolveToastStyle = ResolveStyle
 
+-- Stats that fire often enough to be background noise on their own
+local ROUTINE_KEYS = {
+  jumps = true,
+  missedAttacks = true,
+  enemiesSlain = true,
+  elitesSlain = true,
+  interrupts = true,
+  dispels = true,
+  goldEarnedSession = true,
+  goldEarnedTotal = true,
+  goldSpentTotal = true,
+  itemsSoldToVendors = true,
+  itemsCrafted = true,
+  nodesGathered = true,
+  fishCaught = true,
+  junkFishCaught = true,
+  foodEaten = true,
+  drinksDrunk = true,
+  emotesPerformed = true,
+  arrowsShot = true,
+  bulletsShot = true,
+}
+
+-- Class stats are per-cast and routine, bar the few that are a moment in themselves
+local NOTABLE_KEYS = {
+  battleRezzes = true,
+  layOnHandsCast = true,
+  timesBubbled = true,
+  mindControlsCast = true,
+}
+
+local function IsNotable(tracker, style)
+  if tracker.toastPriority then return tracker.toastPriority == "notable" end
+  if NOTABLE_KEYS[tracker.key] then return true end
+  if style == "record" then return true end
+  if ROUTINE_KEYS[tracker.key] then return false end
+  return tracker.category ~= "class"
+end
+
+JS.IsStatNotable = IsNotable
+
 -- Where every counted stat write reports in
 function Stats.OnStatChanged(key, newValue, oldValue)
   if not JS.PushStatToast then return end
@@ -63,6 +104,10 @@ function Stats.OnStatChanged(key, newValue, oldValue)
 
   local style = ResolveStyle(tracker)
   if not style then return end
+
+  local mode = JS.GetToastMode()
+  if mode == "window" and not JS.IsStatInWindow(key) then return end
+  if mode == "notable" and not IsNotable(tracker, style) then return end
 
   -- A class stat belonging to another class should never surface
   if tracker.class and UnitClass then

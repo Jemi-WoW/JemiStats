@@ -1,8 +1,8 @@
 ## Interface: 11509
-## Title: <|cff00ff00JemiStats|r> v1.4.0
+## Title: <|cff00ff00JemiStats|r> v1.5.0
 ## Notes: Live character stats tracking - by Jemi
 ## Author: Jamie/Jemi
-## Version: 1.4.0
+## Version: 1.5.0
 ## IconTexture: Interface\AddOns\JemiStats\externals\img\JemiStatsIcon.tga
 ## SavedVariables: JemiStatsDB
 ## OptionalDeps: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0
@@ -38,7 +38,6 @@ ui/stats/combat/jsTrackBossesSlain.lua
 ui/stats/combat/jsTrackCombatDurationAverage.lua
 ui/stats/combat/jsTrackDungeonsEntered.lua
 ui/stats/combat/jsTrackDungeonsCompleted.lua
-ui/stats/combat/jsTrackKillingBlows.lua
 ui/stats/combat/jsTrackInterrupts.lua
 ui/stats/combat/jsTrackDispels.lua
 ui/stats/combat/jsTrackResurrectionsCast.lua
@@ -108,6 +107,7 @@ ui/jsPanels_Settings.lua
 ui/jsMinimap.lua
 ui/jsToast.lua
 ui/jsStatsWindow.lua
+ui/jsTutorial.lua
 
 core/jsMigration.lua
 core/jsHost.lua

@@ -315,11 +315,66 @@ function JS.OpenStatsWindow()
   UI:ShowTabByKey("stats")
 end
 
--- Always our own window: a host renders the stats panel but not these options.
-function JS.OpenSettingsWindow()
+-- Which tab is on screen, however this client tracks it
+local function ActiveTab()
+  if UI.usePanelTabs and PanelTemplates_GetSelectedTab then
+    return PanelTemplates_GetSelectedTab(UI.frame)
+  end
+  return UI.selectedTab
+end
+
+-- Goes to the tab asked for, and only closes when already looking at it
+function JS.ToggleTab(tabKey)
+  JS.BuildUI()
+  if not UI.frame then return false end
+
+  local id = UI.tabIndex[tabKey]
+  if not id then return false end
+
+  if UI.frame:IsShown() and ActiveTab() == id then
+    UI.frame:Hide()
+    return false
+  end
+
+  UI.frame:Show()
+  UI.frame:Raise()
+  UI:ShowTab(id)
+  return true
+end
+
+-- Puts a section in view, once the panel has had a frame to settle its sizes
+local function RevealSection(sectionKey)
+  if not sectionKey or not JS.ScrollToSettingsSection then return end
+
+  JS.ScrollToSettingsSection(sectionKey)
+
+  if C_Timer and C_Timer.After then
+    C_Timer.After(0, function() JS.ScrollToSettingsSection(sectionKey) end)
+  end
+end
+
+-- Always our own window: a host renders the stats panel but not these options
+function JS.OpenSettingsWindow(expandSection)
   JS.BuildUI()
   if not UI.frame then return end
+
+  if expandSection and JS.ExpandSettingsSection then
+    JS.ExpandSettingsSection(expandSection)
+  end
+
   UI.frame:Show()
   UI.frame:Raise()
   UI:ShowTabByKey("settings")
+  RevealSection(expandSection)
+end
+
+-- Same, but a second click on the settings tab puts the window away
+function JS.ToggleSettingsWindow(expandSection)
+  if expandSection and JS.ExpandSettingsSection then
+    JS.ExpandSettingsSection(expandSection)
+  end
+
+  if not JS.ToggleTab("settings") then return end
+
+  RevealSection(expandSection)
 end

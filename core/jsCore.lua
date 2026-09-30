@@ -84,6 +84,54 @@ function JS.ShouldSpam(key, cooldown)
   return false
 end
 
+-- Which stats are allowed to toast, stored per character as a plain string
+JS.TOAST_MODES = { "window", "all", "notable" }
+
+JS.TOAST_MODE_LABELS = {
+  window = "Stats in my window",
+  all = "All stats",
+  notable = "Records & milestones",
+}
+
+function JS.GetToastMode()
+  local d = JS.DB()
+  d.settings = d.settings or {}
+
+  local mode = d.settings.toastMode
+  if mode ~= "all" and mode ~= "notable" then
+    mode = "window"
+  end
+
+  return mode
+end
+
+function JS.SetToastMode(mode)
+  local d = JS.DB()
+  d.settings = d.settings or {}
+  d.settings.toastMode = mode
+
+  if JS.RefreshSettingsPanel then
+    JS.RefreshSettingsPanel()
+  end
+end
+
+function JS.CycleToastMode()
+  local current = JS.GetToastMode()
+
+  for i = 1, #JS.TOAST_MODES do
+    if JS.TOAST_MODES[i] == current then
+      JS.SetToastMode(JS.TOAST_MODES[(i % #JS.TOAST_MODES) + 1])
+      return
+    end
+  end
+
+  JS.SetToastMode("window")
+end
+
+function JS.GetToastModeLabel()
+  return JS.TOAST_MODE_LABELS[JS.GetToastMode()] or "Stats in my window"
+end
+
 -- Boolean options, per character; a def's get/set overrides where it is stored.
 
 JS.SETTINGS_DEFS = {
@@ -228,6 +276,23 @@ JS.SETTINGS_DEFS = {
     tooltip = "Show only the change, without the stat's name.\n\nNeeds 'Show stat toasts' switched on.",
     default = false,
   },
+  toastMode = {
+    key = "toastMode",
+    section = "toasts",
+    type = "selector",
+    label = "Toast for",
+    tooltip = "Which stats are allowed to pop up.",
+    options = {
+      { value = "window", label = "Stats in my window",
+        desc = "Only the stats you ticked on the Stats tab." },
+      { value = "all", label = "All stats",
+        desc = "Everything that can toast." },
+      { value = "notable", label = "Records & milestones",
+        desc = "New records, and the events that do not happen every minute." },
+    },
+    get = function() return JS.GetToastMode() end,
+    set = function(value) JS.SetToastMode(value) end,
+  },
   repositionToast = {
     key = "repositionToast",
     section = "toasts",
@@ -289,6 +354,7 @@ JS.SETTINGS_ORDER = {
   },
   toasts = {
     "showStatToasts",
+    "toastMode",
     "minimalStatToasts",
     "repositionToast",
     "resetToastPosition",
@@ -327,7 +393,7 @@ JS.SETTINGS_SECTION_ORDER = {
   {
     key = "toasts",
     title = "Toast Notifications",
-    desc = "Small pop-ups that appear when a tracked stat goes up. Tick a stat in the Stats tab to add it to the on-screen window instead.",
+    desc = "Small pop-ups that appear when a tracked stat goes up. By default only the stats you ticked on the Stats tab are allowed to pop up.",
   },
   {
     key = "advanced",

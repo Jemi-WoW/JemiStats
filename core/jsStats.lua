@@ -80,7 +80,6 @@ Stats.rowOrderByCategory = {
     elitesSlain = 30,
     rareElitesSlain = 40,
     bossesSlain = 50,
-    killingBlows = 55,
     combatDurationAverage = 60,
     dungeonsEntered = 70,
     dungeonsCompleted = 80,
@@ -263,7 +262,6 @@ local function EnsureStatsDB()
   s.timesResurrected     = tonumber(s.timesResurrected or 0) or 0
   s.levelAtFirstDeath    = tonumber(s.levelAtFirstDeath or 0) or 0
 
-  s.killingBlows         = tonumber(s.killingBlows or 0) or 0
   s.interrupts           = tonumber(s.interrupts or 0) or 0
   s.dispels              = tonumber(s.dispels or 0) or 0
   s.resurrectionsCast    = tonumber(s.resurrectionsCast or 0) or 0

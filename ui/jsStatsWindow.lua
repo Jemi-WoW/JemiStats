@@ -157,6 +157,17 @@ local function BuildFrame()
     JS.SaveStatsWindowPosition()
   end)
 
+  -- Both use JemiStats' own window, so neither can open a second one
+  frame:SetScript("OnMouseUp", function(_, button)
+    if button ~= "RightButton" then return end
+
+    if IsShiftKeyDown and IsShiftKeyDown() then
+      JS.ToggleSettingsWindow("toasts")
+    else
+      JS.ToggleTab("stats")
+    end
+  end)
+
   local portrait = frame:CreateTexture(nil, "ARTWORK")
   portrait:SetSize(PORTRAIT_SIZE, PORTRAIT_SIZE)
   portrait:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD_SIDE, -PAD_TOP)
