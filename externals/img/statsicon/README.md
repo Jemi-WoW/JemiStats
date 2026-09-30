@@ -7,7 +7,3 @@ in `core/jsNotify.lua`:
       deaths = "deaths.tga",
       jumps  = "jumps.tga",
     }
-
-Only listed keys are drawn, so a missing file can never show a broken square.
-WoW loads `.tga` and `.blp` for addon art; `.png` will not render.
-Stat keys are the `key` field on each tracker in `ui/stats/**`.
