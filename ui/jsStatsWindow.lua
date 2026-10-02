@@ -157,6 +157,21 @@ local function BuildFrame()
     JS.SaveStatsWindowPosition()
   end)
 
+  -- The same hints the welcome tip gives, for whoever dismissed it
+  frame:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:ClearLines()
+    GameTooltip:AddLine("JemiStats", 1, 0.82, 0)
+    GameTooltip:AddLine("Right click to open the addon", 1, 1, 1)
+    GameTooltip:AddLine("Shift + right click for settings", 1, 1, 1)
+    GameTooltip:AddLine("Drag to move", 1, 1, 1)
+    GameTooltip:Show()
+  end)
+
+  frame:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+  end)
+
   -- Both use JemiStats' own window, so neither can open a second one
   frame:SetScript("OnMouseUp", function(_, button)
     if button ~= "RightButton" then return end

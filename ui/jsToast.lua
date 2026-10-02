@@ -6,6 +6,7 @@ local TOAST_GAP = 4
 local TOAST_LIFETIME = 3.0
 local TOAST_FADE = 0.4
 local TOAST_MOVE_SPEED = 18
+local TOAST_DRIFT = 22
 local TOAST_MAX = 8
 local TOAST_MIN_WIDTH = 60
 local TOAST_MAX_WIDTH = 420
@@ -21,7 +22,9 @@ local PREVIEW_GAP = 8
 local CONFIRM_WIDTH = 62
 local CONFIRM_HEIGHT = 18
 
-local DEFAULT_X, DEFAULT_Y = -260, -220
+-- Bottom right, where toasts rise up and to the left into empty screen
+local DEFAULT_POINT = "BOTTOMRIGHT"
+local DEFAULT_X, DEFAULT_Y = -30, 110
 
 local container
 local toasts = {}
@@ -59,7 +62,7 @@ function JS.RestoreToastPosition()
   if db.point then
     container:SetPoint(db.point, UIParent, db.relPoint or db.point, db.x or 0, db.y or 0)
   else
-    container:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", DEFAULT_X, DEFAULT_Y)
+    container:SetPoint(DEFAULT_POINT, UIParent, DEFAULT_POINT, DEFAULT_X, DEFAULT_Y)
   end
 end
 
@@ -83,6 +86,14 @@ function JS.ToastGrowsUp()
   if not centerY or screenHeight <= 0 then return false end
 
   return centerY < (screenHeight / 2)
+end
+
+-- Slides on past where it appeared, stopping once its life is up
+local function DriftFor(toast, now)
+  local age = now - (toast.spawnTime or now)
+  if age < 0 then age = 0 end
+  if age > TOAST_LIFETIME then age = TOAST_LIFETIME end
+  return age * TOAST_DRIFT
 end
 
 local function PositionToast(toast, growsRight, growsUp, y)
@@ -136,12 +147,13 @@ local function EnsureContainer()
         end
 
         -- Eased toward the target so a push reads as a slide, not a jump
-        toast.y = toast.y or toast.baseY
-        local dy = toast.baseY - toast.y
+        local target = toast.baseY + DriftFor(toast, now)
+        toast.y = toast.y or target
+        local dy = target - toast.y
         if math.abs(dy) > 0.25 then
           toast.y = toast.y + dy * math.min(1, elapsed * TOAST_MOVE_SPEED)
         else
-          toast.y = toast.baseY
+          toast.y = target
         end
 
         PositionToast(toast, growsRight, growsUp, toast.y)
@@ -281,6 +293,7 @@ function JS.PushStatToast(tracker, style, delta, newValue)
 
   toast.statKey = tracker.key
   toast.delta = delta
+  toast.spawnTime = now
   toast.lastAt = now
   toast.expireAt = now + TOAST_LIFETIME
   toast.y = nil
